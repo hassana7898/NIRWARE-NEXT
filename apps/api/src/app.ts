@@ -19,6 +19,7 @@ import { reportsRouter } from './routes/reports.routes.js';
 import { excelRouter } from './routes/excel.routes.js';
 import { aiRouter } from './routes/ai.routes.js';
 import { healthRouter, auditRouter } from './routes/health.routes.js';
+import { settingsRouter } from './routes/settings.routes.js';
 import { NotFoundError } from '@nirware/shared';
 
 dotenv.config();
@@ -88,6 +89,7 @@ export function createApp(): Express {
   app.use(`${prefix}/excel`, excelRouter);
   app.use(`${prefix}/ai`, aiRouter);
   app.use(`${prefix}/audit`, auditRouter);
+  app.use(`${prefix}/settings`, settingsRouter);
 
   // 6. 404 Catch-All
   app.use((req, res, next) => {

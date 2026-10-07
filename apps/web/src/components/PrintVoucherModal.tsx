@@ -1,4 +1,6 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../api/client';
 import { formatToJalali, toPersianDigits, formatPersianNumber } from '@nirware/shared';
 import { Printer, X } from 'lucide-react';
 
@@ -35,10 +37,30 @@ export const PrintVoucherModal: React.FC<PrintVoucherModalProps> = ({
   vehiclePlate,
   notes,
 }) => {
+  const { data: settings } = useQuery<any>({
+    queryKey: ['company-settings'],
+    queryFn: () => api.get('/settings'),
+    enabled: isOpen,
+  });
+
   if (!isOpen) return null;
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const company = settings || {
+    companyName: 'کارخانجات تولید خوراک طیور نیرور (NIRWARE)',
+    legalName: 'صنایع خوراک دام و طیور نیروار (سهامی خاص)',
+    registrationNumber: '۱۴۲۸۵',
+    nationalId: '۱۰۱۰۰۵۴۸۹۲۱',
+    factoryAddress: 'استان گلستان، کیلومتر ۵ جاده گرگان به آق‌قلا، شهرک صنعتی، فاز ۲',
+    signatoryManagerTitle: 'مدیر فنی و کارخانه',
+    signatoryManagerName: 'مهندس احسان حسینی',
+    signatoryScaleTitle: 'متصدی باسکول و کنترل کیفی',
+    signatoryScaleName: 'محمدرضا سمیعی',
+    signatoryDriverTitle: 'راننده تحویل‌دهنده بار',
+    signatoryFarmerTitle: 'مرغدار / تحویل‌گیرنده در مقصد',
   };
 
   return (
@@ -47,13 +69,13 @@ export const PrintVoucherModal: React.FC<PrintVoucherModalProps> = ({
         {/* Modal Controls Bar */}
         <div className="no-print bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Printer className="w-5 h-5 text-brand-400" />
+            <Printer className="w-5 h-5 text-emerald-400" />
             <span className="font-semibold text-sm">پیش‌نمایش چاپ رسمی حواله و بارنامه</span>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={handlePrint}
-              className="bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition shadow"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition shadow"
             >
               <Printer className="w-4 h-4" />
               <span>ارسال به چاپگر</span>
@@ -79,11 +101,11 @@ export const PrintVoucherModal: React.FC<PrintVoucherModalProps> = ({
               </div>
               <div className="text-center">
                 <h1 className="text-lg font-black tracking-tight text-slate-950 mb-1">
-                  کارخانجات تولید خوراک طیور نیرور (NIRWARE)
+                  {company.companyName}
                 </h1>
                 <h2 className="text-sm font-bold text-slate-700">{title}</h2>
                 <div className="text-[11px] text-slate-500 mt-1">
-                  سهامی خاص - شماره ثبت: ۷۸۴۹۲ - دارای استاندارد ملی خوراک آماده دام و طیور
+                  {company.legalName} - شماره ثبت: {toPersianDigits(company.registrationNumber || '۱۴۲۸۵')} - شناسه ملی: {toPersianDigits(company.nationalId || '')}
                 </div>
               </div>
               <div className="w-40 text-left space-y-1 text-[11px]">
@@ -192,29 +214,29 @@ export const PrintVoucherModal: React.FC<PrintVoucherModalProps> = ({
             )}
           </div>
 
-          {/* Section 4: Four Formal Signatures */}
+          {/* Section 4: Four Formal Configurable Signatures */}
           <div className="border border-slate-400 rounded-lg p-4 mt-6">
             <div className="grid grid-cols-4 gap-4 text-center">
               <div className="border-l border-slate-200 pl-2">
-                <div className="font-bold text-slate-800 mb-1">مسئول باسکول و بارگیری</div>
+                <div className="font-bold text-slate-800 mb-1">{company.signatoryScaleTitle || 'متصدی باسکول و بارگیری'}</div>
                 <div className="text-[10px] text-slate-400 mb-8">نام و امضا</div>
-                <div className="text-[11px] text-slate-600 font-semibold">بهرام کاظمی</div>
+                <div className="text-[11px] text-slate-600 font-semibold">{company.signatoryScaleName || 'مسئول توزین'}</div>
               </div>
 
               <div className="border-l border-slate-200 pl-2">
-                <div className="font-bold text-slate-800 mb-1">مدیر بازرگانی و فروش</div>
+                <div className="font-bold text-slate-800 mb-1">{company.signatoryManagerTitle || 'مدیر فنی و کارخانه'}</div>
                 <div className="text-[10px] text-slate-400 mb-8">نام و امضا</div>
-                <div className="text-[11px] text-slate-600 font-semibold">مهندس صمدی</div>
+                <div className="text-[11px] text-slate-600 font-semibold">{company.signatoryManagerName || 'مدیر کارخانه'}</div>
               </div>
 
               <div className="border-l border-slate-200 pl-2">
-                <div className="font-bold text-slate-800 mb-1">راننده تحویل‌گیرنده بار</div>
+                <div className="font-bold text-slate-800 mb-1">{company.signatoryDriverTitle || 'راننده تحویل‌دهنده بار'}</div>
                 <div className="text-[10px] text-slate-400 mb-8">نام و امضا</div>
                 <div className="text-[11px] text-slate-600 font-semibold">{driverName}</div>
               </div>
 
               <div>
-                <div className="font-bold text-slate-800 mb-1">مرغدار / تحویل‌گیرنده در مقصد</div>
+                <div className="font-bold text-slate-800 mb-1">{company.signatoryFarmerTitle || 'مرغدار / تحویل‌گیرنده در مقصد'}</div>
                 <div className="text-[10px] text-slate-400 mb-8">مهر و امضای تایید دریافت (کد OTP)</div>
                 <div className="text-[11px] text-slate-600 font-semibold">{customerName}</div>
               </div>

@@ -19,37 +19,32 @@ interface ManagerDashboardScreenProps {
 export const ManagerDashboardScreen: React.FC<ManagerDashboardScreenProps> = ({ user, onLogout }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [orders, setOrders] = useState<any[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [kpis, setKpis] = useState({
-    pendingOrdersCount: 2,
-    activeDeliveriesCount: 1,
-    todayProducedKg: 25000,
+    pendingOrdersCount: 0,
+    activeDeliveriesCount: 0,
+    todayProducedKg: 0,
   });
 
   const loadData = async () => {
     try {
       setRefreshing(true);
-      const ordersRes = await mobileApi.get<any[]>('/orders');
-      setOrders(ordersRes || []);
-    } catch (e) {
-      // Use mock fallback if offline
-      setOrders([
-        {
-          id: 'ord-1',
-          orderNumber: 'ORD-1403-010',
-          farmerName: 'حاج احمد رضایی',
-          productName: 'پیش‌دان کرامبل ویژه',
-          requestedQuantityKg: 10000,
-          status: 'PENDING_APPROVAL',
-        },
-        {
-          id: 'ord-2',
-          orderNumber: 'ORD-1403-011',
-          farmerName: 'مرغداری بهاران',
-          productName: 'میان‌دان یک پلت',
-          requestedQuantityKg: 15000,
-          status: 'APPROVED',
-        },
+      setErrorMessage(null);
+      const [ordersRes, summaryRes] = await Promise.all([
+        mobileApi.get<any[]>('/orders'),
+        mobileApi.get<any>('/reports/summary').catch(() => null),
       ]);
+      setOrders(ordersRes || []);
+      if (summaryRes?.kpis) {
+        setKpis({
+          pendingOrdersCount: summaryRes.kpis.pendingOrdersCount || 0,
+          activeDeliveriesCount: summaryRes.kpis.activeDeliveriesCount || 0,
+          todayProducedKg: summaryRes.kpis.todayProducedKg || 0,
+        });
+      }
+    } catch (e: any) {
+      setErrorMessage(e.message || 'خطا در دریافت اطلاعات از سرور');
+      setOrders([]);
     } finally {
       setRefreshing(false);
     }
@@ -101,38 +96,53 @@ export const ManagerDashboardScreen: React.FC<ManagerDashboardScreenProps> = ({ 
           </View>
           <View style={[styles.kpiCard, { borderLeftColor: '#10b981' }]}>
             <Text style={styles.kpiLabel}>تولید امروز (کیلوگرم)</Text>
-            <Text style={styles.kpiValue}>۲۵,۰۰۰</Text>
+            <Text style={styles.kpiValue}>{kpis.todayProducedKg.toLocaleString()}</Text>
           </View>
         </View>
 
-        {/* Section: Pending Approvals */}
-        <Text style={styles.sectionTitle}>سفارش‌های نیازمند اقدام فوری</Text>
-        {orders.map((order) => (
-          <View key={order.id} style={styles.orderCard}>
-            <View style={styles.orderHeader}>
-              <Text style={styles.orderNum}>{order.orderNumber || order.id.slice(0, 8)}</Text>
-              <Text style={[styles.statusTag, order.status === 'PENDING_APPROVAL' ? styles.statusPending : styles.statusApproved]}>
-                {order.status === 'PENDING_APPROVAL' ? 'در انتظار بررسی' : order.status}
-              </Text>
-            </View>
-
-            <Text style={styles.farmerName}>مرغدار: {order.farmerName || 'نامشخص'}</Text>
-            <Text style={styles.productDesc}>
-              {order.productName} — {(order.requestedQuantityKg || 0).toLocaleString()} کیلوگرم
-            </Text>
-
-            {order.status === 'PENDING_APPROVAL' && (
-              <View style={styles.actionRow}>
-                <TouchableOpacity
-                  style={styles.approveBtn}
-                  onPress={() => handleApprove(order.id)}
-                >
-                  <Text style={styles.approveBtnText}>تأیید سفارش</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+        {errorMessage && (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{errorMessage}</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={loadData}>
+              <Text style={styles.retryBtnText}>تلاش مجدد</Text>
+            </TouchableOpacity>
           </View>
-        ))}
+        )}
+
+        {/* Section: Orders */}
+        <Text style={styles.sectionTitle}>سفارش‌های نیازمند اقدام فوری</Text>
+        {orders.length === 0 && !errorMessage ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyText}>هیچ سفارشی در حال حاضر ثبت نشده است.</Text>
+          </View>
+        ) : (
+          orders.map((order) => (
+            <View key={order.id} style={styles.orderCard}>
+              <View style={styles.orderHeader}>
+                <Text style={styles.orderNum}>{order.orderNumber || order.id.slice(0, 8)}</Text>
+                <Text style={[styles.statusTag, order.status === 'PENDING_APPROVAL' ? styles.statusPending : styles.statusApproved]}>
+                  {order.status === 'PENDING_APPROVAL' ? 'در انتظار بررسی' : order.status}
+                </Text>
+              </View>
+
+              <Text style={styles.farmerName}>مرغدار: {order.farmerName || 'نامشخص'}</Text>
+              <Text style={styles.productDesc}>
+                {order.productName} — {(order.requestedQuantityKg || 0).toLocaleString()} کیلوگرم
+              </Text>
+
+              {order.status === 'PENDING_APPROVAL' && (
+                <View style={styles.actionRow}>
+                  <TouchableOpacity
+                    style={styles.approveBtn}
+                    onPress={() => handleApprove(order.id)}
+                  >
+                    <Text style={styles.approveBtnText}>تأیید سفارش</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          ))
+        )}
       </ScrollView>
     </View>
   );
@@ -276,5 +286,44 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 12,
     fontWeight: '700',
+  },
+  errorBox: {
+    backgroundColor: '#fee2e2',
+    borderColor: '#fca5a5',
+    borderWidth: 1,
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  errorText: {
+    color: '#b91c1c',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  retryBtn: {
+    backgroundColor: '#dc2626',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  retryBtnText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  emptyCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    color: '#94a3b8',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

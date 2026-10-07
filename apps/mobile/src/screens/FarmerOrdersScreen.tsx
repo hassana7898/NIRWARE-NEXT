@@ -9,6 +9,7 @@ import {
   Modal,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { mobileApi } from '../api/client';
 import { MobileUser } from '../types';
@@ -20,45 +21,51 @@ interface FarmerOrdersScreenProps {
 
 export const FarmerOrdersScreen: React.FC<FarmerOrdersScreenProps> = ({ user, onLogout }) => {
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [orders, setOrders] = useState<any[]>([]);
-  const [quota, setQuota] = useState({
-    approvedKg: 40000,
-    usedKg: 15000,
-    remainingKg: 25000,
+  const [quota, setQuota] = useState<{
+    approvedKg: number;
+    usedKg: number;
+    remainingKg: number;
+  }>({
+    approvedKg: 0,
+    usedKg: 0,
+    remainingKg: 0,
   });
 
   const [modalVisible, setModalVisible] = useState(false);
   const [requestedKg, setRequestedKg] = useState('10000');
-  const [address, setAddress] = useState('کیلومتر ۵ جاده گرگان، سالن ۲');
+  const [address, setAddress] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const loadData = async () => {
     try {
+      setError(null);
       setRefreshing(true);
-      const ordersRes = await mobileApi.get<any[]>('/orders');
-      setOrders(ordersRes || []);
-    } catch (e) {
-      // Fallback demonstration
-      setOrders([
-        {
-          id: 'ord-101',
-          orderNumber: 'ORD-1403-088',
-          productName: 'پیش‌دان کرامبل ویژه',
-          requestedQuantityKg: 10000,
-          status: 'IN_TRANSIT',
-          deliveryAddress: 'مزرعه نمونه، سالن ۱',
-          otpDisplay: '748291',
-        },
-        {
-          id: 'ord-102',
-          orderNumber: 'ORD-1403-089',
-          productName: 'میان‌دان یک پلت',
-          requestedQuantityKg: 12000,
-          status: 'SUBMITTED',
-          deliveryAddress: 'مزرعه نمونه، سالن ۲',
-        },
+      const [ordersRes, quotasRes] = await Promise.all([
+        mobileApi.get<any[]>('/orders'),
+        mobileApi.get<any[]>(`/farmers/${user.farmerId || user.id}/quotas`).catch(() => []),
       ]);
+
+      setOrders(ordersRes || []);
+
+      if (quotasRes && quotasRes.length > 0) {
+        const primary = quotasRes[0];
+        const approved = Number(primary.approvedQuantityKg || primary.approved_quantity_kg || 0);
+        const used = Number(primary.usedQuantityKg || primary.used_quantity_kg || 0);
+        setQuota({
+          approvedKg: approved,
+          usedKg: used,
+          remainingKg: Math.max(0, approved - used),
+        });
+      }
+    } catch (e: any) {
+      setError(e.message || 'خطا در ارتباط با سرور. لطفاً اتصال اینترنت را بررسی فرمایید.');
+      setOrders([]);
     } finally {
       setRefreshing(false);
+      setLoading(false);
     }
   };
 
@@ -67,22 +74,29 @@ export const FarmerOrdersScreen: React.FC<FarmerOrdersScreenProps> = ({ user, on
   }, []);
 
   const handleCreateOrder = async () => {
+    if (!requestedKg || Number(requestedKg) <= 0) {
+      Alert.alert('خطا', 'لطفاً مقدار دان درخواستی را مشخص فرمایید.');
+      return;
+    }
+    setSubmitting(true);
     try {
       await mobileApi.post('/orders', {
         farmerId: user.farmerId || user.id,
         requestedQuantityKg: Number(requestedKg),
-        deliveryAddress: address,
+        deliveryAddress: address || 'آدرس پیش‌فرض مزرعه ثبت شده',
         deliveryDateNeeded: new Date(Date.now() + 86400000 * 3).toISOString().slice(0, 10),
       });
-      Alert.alert('سفارش ثبت شد', 'درخواست خوراک شما با موفقیت جهت تایید مدیریت ارسال گردید.');
+      Alert.alert('ثبت موفق', 'درخواست خوراک شما با موفقیت جهت بررسی و تأیید به کارخانه ارسال گردید.');
       setModalVisible(false);
       loadData();
     } catch (err: any) {
-      Alert.alert('خطا', err.message || 'خطا در ثبت سفارش');
+      Alert.alert('خطا در ثبت سفارش', err.message || 'خطا در پردازش درخواست');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const usagePercent = Math.round((quota.usedKg / quota.approvedKg) * 100);
+  const usagePercent = quota.approvedKg > 0 ? Math.min(100, Math.round((quota.usedKg / quota.approvedKg) * 100)) : 0;
 
   return (
     <View style={styles.container}>
@@ -90,7 +104,7 @@ export const FarmerOrdersScreen: React.FC<FarmerOrdersScreenProps> = ({ user, on
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>مرغدار گرامی، {user.fullName}</Text>
-          <Text style={styles.roleBadge}>سامانه ثبت سفارش و رهگیری دان</Text>
+          <Text style={styles.roleBadge}>سامانه همراه نظارت بر سهمیه و سفارش دان</Text>
         </View>
         <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
           <Text style={styles.logoutBtnText}>خروج</Text>
@@ -102,20 +116,22 @@ export const FarmerOrdersScreen: React.FC<FarmerOrdersScreenProps> = ({ user, on
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={loadData} />}
       >
         {/* Quota Card */}
-        <View style={styles.quotaCard}>
-          <Text style={styles.quotaTitle}>سهمیه مصوب دوره پرورشی جاری</Text>
-          <View style={styles.progressBarBg}>
-            <View style={[styles.progressBarFill, { width: `${usagePercent}%` }]} />
+        {quota.approvedKg > 0 && (
+          <View style={styles.quotaCard}>
+            <Text style={styles.quotaTitle}>سهمیه مصوب دوره پرورشی فعال</Text>
+            <View style={styles.progressBarBg}>
+              <View style={[styles.progressBarFill, { width: `${usagePercent}%` }]} />
+            </View>
+            <View style={styles.quotaStats}>
+              <Text style={styles.quotaStatText}>
+                مصرف شده: {quota.usedKg.toLocaleString()} کگ ({usagePercent}٪)
+              </Text>
+              <Text style={[styles.quotaStatText, { color: '#059669', fontWeight: '800' }]}>
+                مانده مجاز: {quota.remainingKg.toLocaleString()} کگ
+              </Text>
+            </View>
           </View>
-          <View style={styles.quotaStats}>
-            <Text style={styles.quotaStatText}>
-              مصرف شده: {quota.usedKg.toLocaleString()} کگ
-            </Text>
-            <Text style={[styles.quotaStatText, { color: '#059669', fontWeight: '800' }]}>
-              مانده مجاز: {quota.remainingKg.toLocaleString()} کگ
-            </Text>
-          </View>
-        </View>
+        )}
 
         {/* Action Button */}
         <TouchableOpacity style={styles.newOrderBtn} onPress={() => setModalVisible(true)}>
@@ -124,31 +140,50 @@ export const FarmerOrdersScreen: React.FC<FarmerOrdersScreenProps> = ({ user, on
 
         {/* Orders List */}
         <Text style={styles.sectionTitle}>سفارش‌های من و وضعیت بارگیری</Text>
-        {orders.map((o) => (
-          <View key={o.id} style={styles.orderCard}>
-            <View style={styles.orderHeader}>
-              <Text style={styles.orderNum}>{o.orderNumber || o.id.slice(0, 8)}</Text>
-              <Text style={styles.statusBadge}>{o.status}</Text>
-            </View>
 
-            <Text style={styles.orderProduct}>{o.productName}</Text>
-            <Text style={styles.orderDetail}>
-              مقدار درخواستی: {(o.requestedQuantityKg || 0).toLocaleString()} کیلوگرم
-            </Text>
-            <Text style={styles.orderDetail}>مقصد: {o.deliveryAddress || 'ثبت نشده'}</Text>
-
-            {/* OTP Alert if In Transit */}
-            {(o.status === 'IN_TRANSIT' || o.otpDisplay) && (
-              <View style={styles.otpBox}>
-                <Text style={styles.otpLabel}>کد تحویل به راننده هنگام تخلیه (OTP):</Text>
-                <Text style={styles.otpCode}>{o.otpDisplay || '۸۳۲۹۴۱'}</Text>
-                <Text style={styles.otpNote}>
-                  این رمز را پس از باسکول و تخلیه دان در سیلو، جهت تأیید قطعی به راننده تحویل دهید.
-                </Text>
-              </View>
-            )}
+        {loading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color="#059669" />
+            <Text style={styles.loadingText}>در حال دریافت وضعیت سفارش‌ها از سرور...</Text>
           </View>
-        ))}
+        ) : error ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={loadData}>
+              <Text style={styles.retryBtnText}>تلاش مجدد</Text>
+            </TouchableOpacity>
+          </View>
+        ) : orders.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyText}>هیچ سفارشی در این دوره ثبت نگردیده است.</Text>
+          </View>
+        ) : (
+          orders.map((o) => (
+            <View key={o.id} style={styles.orderCard}>
+              <View style={styles.orderHeader}>
+                <Text style={styles.orderNum}>{o.orderNumber || o.id.slice(0, 8)}</Text>
+                <Text style={styles.statusBadge}>{o.status}</Text>
+              </View>
+
+              <Text style={styles.orderProduct}>{o.productName || 'خوراک آماده طیور'}</Text>
+              <Text style={styles.orderDetail}>
+                مقدار درخواستی: {(o.requestedQuantityKg || o.requested_quantity_kg || 0).toLocaleString()} کیلوگرم
+              </Text>
+              <Text style={styles.orderDetail}>مقصد: {o.deliveryAddress || o.delivery_address || 'ثبت نشده'}</Text>
+
+              {/* Real OTP Display if Available */}
+              {o.otpCode && (
+                <View style={styles.otpBox}>
+                  <Text style={styles.otpLabel}>کد تحویل به راننده هنگام تخلیه (OTP):</Text>
+                  <Text style={styles.otpCode}>{o.otpCode}</Text>
+                  <Text style={styles.otpNote}>
+                    این رمز را صرفاً پس از اتمام توزین و تخلیه دان در سیلو، جهت تأیید قطعی به راننده تحویل فرمایید.
+                  </Text>
+                </View>
+              )}
+            </View>
+          ))
+        )}
       </ScrollView>
 
       {/* New Order Modal */}
@@ -169,12 +204,19 @@ export const FarmerOrdersScreen: React.FC<FarmerOrdersScreenProps> = ({ user, on
             <TextInput
               style={styles.modalInput}
               value={address}
+              placeholder="مثال: سالن شماره ۲ فارم البرز"
               onChangeText={setAddress}
             />
 
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.submitBtn} onPress={handleCreateOrder}>
-                <Text style={styles.submitBtnText}>ارسال سفارش به کارخانه</Text>
+              <TouchableOpacity
+                style={[styles.submitBtn, submitting && styles.disabledSubmit]}
+                disabled={submitting}
+                onPress={handleCreateOrder}
+              >
+                <Text style={styles.submitBtnText}>
+                  {submitting ? 'در حال ارسال به سرور...' : 'ارسال سفارش به کارخانه'}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.cancelBtn}
@@ -232,6 +274,49 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
+  },
+  loadingBox: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 12,
+    color: '#64748b',
+  },
+  errorBox: {
+    backgroundColor: '#fee2e2',
+    borderRadius: 14,
+    padding: 16,
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#991b1b',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  retryBtn: {
+    backgroundColor: '#dc2626',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  retryBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  emptyCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 24,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 13,
+    color: '#94a3b8',
   },
   quotaCard: {
     backgroundColor: '#ffffff',
@@ -402,6 +487,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
+  },
+  disabledSubmit: {
+    backgroundColor: '#94a3b8',
+    opacity: 0.6,
   },
   submitBtnText: {
     color: '#ffffff',

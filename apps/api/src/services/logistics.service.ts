@@ -326,8 +326,13 @@ export class LogisticsService {
       entityId: deliveryId,
     });
 
-    // In development / demo, we return rawOtp for testing. In production, dispatched via SMS.
-    return { success: true, expiresAt: expiresAt.toISOString(), devOtpPreview: rawOtp };
+    // In production, raw OTP is strictly excluded and delivered via SMS provider.
+    const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+    return {
+      success: true,
+      expiresAt: expiresAt.toISOString(),
+      ...(isDev ? { devOtpPreview: rawOtp } : {}),
+    };
   }
 
   /**

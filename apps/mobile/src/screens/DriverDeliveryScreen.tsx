@@ -9,9 +9,12 @@ import {
   Modal,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { mobileApi } from '../api/client';
 import { MobileUser, MobileDelivery } from '../types';
+import { LocationService } from '../services/location.service';
+import { SignaturePad } from '../components/SignaturePad';
 
 interface DriverDeliveryScreenProps {
   user: MobileUser;
@@ -20,67 +23,77 @@ interface DriverDeliveryScreenProps {
 
 export const DriverDeliveryScreen: React.FC<DriverDeliveryScreenProps> = ({ user, onLogout }) => {
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [deliveries, setDeliveries] = useState<MobileDelivery[]>([]);
   const [selectedDelivery, setSelectedDelivery] = useState<MobileDelivery | null>(null);
+
+  // Modal states
   const [otpInput, setOtpInput] = useState('');
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
+  const [showSignaturePad, setShowSignaturePad] = useState(false);
+  const [capturedSignature, setCapturedSignature] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const loadData = async () => {
     try {
+      setError(null);
       setRefreshing(true);
       const res = await mobileApi.get<MobileDelivery[]>('/deliveries/my');
       setDeliveries(res || []);
-    } catch (e) {
-      // Fallback demo data
-      setDeliveries([
-        {
-          id: 'del-501',
-          orderId: 'ord-101',
-          orderNumber: 'ORD-1403-088',
-          farmerName: 'حاج احمد رضایی',
-          farmerPhone: '09121112233',
-          destinationAddress: 'کیلومتر ۵ جاده گرگان، سالن ۲ مرغداری',
-          productName: 'پیش‌دان کرامبل ویژه',
-          weightKg: 10000,
-          status: 'ASSIGNED',
-        },
-      ]);
+    } catch (e: any) {
+      setError(e.message || 'خطا در برقراری ارتباط با سامانه کارخانه. لطفاً اتصال اینترنت خود را بررسی کنید.');
+      setDeliveries([]);
     } finally {
       setRefreshing(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     loadData();
+    LocationService.requestPermission();
   }, []);
 
   const handleStartTransit = async (deliveryId: string) => {
     try {
-      await mobileApi.post(`/deliveries/${deliveryId}/start-transit`);
-      Alert.alert('شروع بارگیری', 'وضعیت بار به «در مسیر حمل» تغییر یافت.');
+      const coords = await LocationService.getCurrentLocation();
+      await mobileApi.post(`/deliveries/${deliveryId}/start-transit`, {
+        latitude: coords?.latitude,
+        longitude: coords?.longitude,
+      });
+      Alert.alert('شروع حمل بار', 'وضعیت بارنامه به «در مسیر حمل به سوی مرغداری» تغییر یافت.');
       loadData();
     } catch (err: any) {
-      Alert.alert('خطا', err.message || 'خطا در تغییر وضعیت');
+      Alert.alert('خطا', err.message || 'خطا در ثبت شروع حمل');
     }
   };
 
   const handleConfirmDelivery = async () => {
     if (!selectedDelivery || !otpInput.trim()) return;
+    if (!capturedSignature) {
+      Alert.alert('امضای تحویل الزامی است', 'لطفاً ابتدا امضای دیجیتال مرغدار یا نماینده مزرعه را اخذ فرمایید.');
+      return;
+    }
+
     setSubmitting(true);
     try {
+      const coords = await LocationService.getCurrentLocation();
       await mobileApi.post(`/deliveries/${selectedDelivery.id}/confirm`, {
         otp: otpInput.trim(),
-        signature: 'SIGNED_ON_MOBILE_DEVICE',
+        signature: capturedSignature,
+        latitude: coords?.latitude,
+        longitude: coords?.longitude,
       });
 
-      Alert.alert('تحویل قطعی شد', 'رمز OTP تایید و حواله تحویل با موفقیت ثبت شد.');
+      Alert.alert('تأیید نهایی', 'رمز OTP راستی‌آزمایی شد و رسید تحویل با موفقیت ثبت و نهایی گردید.');
       setConfirmModalVisible(false);
       setSelectedDelivery(null);
       setOtpInput('');
+      setCapturedSignature(null);
       loadData();
     } catch (err: any) {
-      Alert.alert('خطای تایید OTP', err.message || 'رمز وارد شده اشتباه یا منقضی شده است.');
+      Alert.alert('خطای اعتبارسنجی OTP', err.message || 'کد وارد شده اشتباه یا منقضی شده است.');
     } finally {
       setSubmitting(false);
     }
@@ -92,7 +105,7 @@ export const DriverDeliveryScreen: React.FC<DriverDeliveryScreenProps> = ({ user
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>راننده گرامی، {user.fullName}</Text>
-          <Text style={styles.roleBadge}>ناوگان حمل و تحویل خوراک طیور</Text>
+          <Text style={styles.roleBadge}>سامانه همراه ناوگان ترابری و بارگیری</Text>
         </View>
         <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
           <Text style={styles.logoutBtnText}>خروج</Text>
@@ -105,7 +118,19 @@ export const DriverDeliveryScreen: React.FC<DriverDeliveryScreenProps> = ({ user
       >
         <Text style={styles.sectionTitle}>حواله‌های بارگیری و مقاصد تحویل</Text>
 
-        {deliveries.length === 0 ? (
+        {loading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color="#059669" />
+            <Text style={styles.loadingText}>در حال دریافت فهرست بارنامه‌های فعال...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={loadData}>
+              <Text style={styles.retryBtnText}>تلاش مجدد</Text>
+            </TouchableOpacity>
+          </View>
+        ) : deliveries.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>هیچ باری در حال حاضر به شما تخصیص نیافته است.</Text>
           </View>
@@ -151,41 +176,68 @@ export const DriverDeliveryScreen: React.FC<DriverDeliveryScreenProps> = ({ user
         )}
       </ScrollView>
 
-      {/* OTP Confirmation Modal */}
+      {/* OTP and Digital Signature Modal */}
       <Modal visible={confirmModalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>تأیید تحویل و ثبت امضای دیجیتال</Text>
-            <Text style={styles.modalSub}>
-              کد ۶ رقمی پیامک شده به مرغدار ({selectedDelivery?.farmerName}) را دریافت و وارد نمایید:
-            </Text>
-
-            <TextInput
-              style={styles.otpInput}
-              keyboardType="number-pad"
-              maxLength={6}
-              value={otpInput}
-              onChangeText={setOtpInput}
-              placeholder="••••••"
-            />
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.modalSubmitBtn}
-                disabled={submitting || otpInput.length < 6}
-                onPress={handleConfirmDelivery}
-              >
-                <Text style={styles.modalSubmitText}>
-                  {submitting ? 'در حال راستی‌آزمایی...' : 'تأیید قطعی تحویل'}
+            {showSignaturePad ? (
+              <SignaturePad
+                actorName={selectedDelivery?.farmerName || 'مرغدار'}
+                deliveryId={selectedDelivery?.id || ''}
+                onSave={(sigData) => {
+                  setCapturedSignature(sigData);
+                  setShowSignaturePad(false);
+                }}
+                onCancel={() => setShowSignaturePad(false)}
+              />
+            ) : (
+              <>
+                <Text style={styles.modalTitle}>تأیید تحویل و ثبت امضای دیجیتال</Text>
+                <Text style={styles.modalSub}>
+                  کد ۶ رقمی پیامک شده به مرغدار ({selectedDelivery?.farmerName}) را دریافت و وارد نمایید:
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalCancelBtn}
-                onPress={() => setConfirmModalVisible(false)}
-              >
-                <Text style={styles.modalCancelText}>انصراف</Text>
-              </TouchableOpacity>
-            </View>
+
+                <TextInput
+                  style={styles.otpInput}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  value={otpInput}
+                  onChangeText={setOtpInput}
+                  placeholder="••••••"
+                />
+
+                {/* Signature status box */}
+                <TouchableOpacity
+                  style={[styles.sigStatusBtn, capturedSignature ? styles.sigDone : styles.sigNeeded]}
+                  onPress={() => setShowSignaturePad(true)}
+                >
+                  <Text style={[styles.sigStatusText, capturedSignature ? styles.sigDoneText : styles.sigNeededText]}>
+                    {capturedSignature ? '✓ امضای دیجیتال مرغدار اخذ شد (تغییر)' : '✎ رسم و اخذ امضای دیجیتال مرغدار'}
+                  </Text>
+                </TouchableOpacity>
+
+                <View style={styles.modalActions}>
+                  <TouchableOpacity
+                    style={[styles.modalSubmitBtn, (!capturedSignature || otpInput.length < 6) && styles.disabledSubmit]}
+                    disabled={submitting || otpInput.length < 6 || !capturedSignature}
+                    onPress={handleConfirmDelivery}
+                  >
+                    <Text style={styles.modalSubmitText}>
+                      {submitting ? 'در حال راستی‌آزمایی...' : 'تأیید قطعی تحویل'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.modalCancelBtn}
+                    onPress={() => {
+                      setConfirmModalVisible(false);
+                      setCapturedSignature(null);
+                    }}
+                  >
+                    <Text style={styles.modalCancelText}>انصراف</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
           </View>
         </View>
       </Modal>
@@ -242,6 +294,39 @@ const styles = StyleSheet.create({
     color: '#334155',
     marginBottom: 12,
     textAlign: 'right',
+  },
+  loadingBox: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 12,
+    color: '#64748b',
+  },
+  errorBox: {
+    backgroundColor: '#fee2e2',
+    borderRadius: 14,
+    padding: 16,
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#991b1b',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  retryBtn: {
+    backgroundColor: '#dc2626',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  retryBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
   },
   emptyCard: {
     backgroundColor: '#ffffff',
@@ -379,7 +464,34 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 10,
     color: '#047857',
+    marginBottom: 14,
+  },
+  sigStatusBtn: {
+    width: '100%',
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: 'center',
     marginBottom: 16,
+  },
+  sigNeeded: {
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  sigDone: {
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
+  },
+  sigStatusText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  sigNeededText: {
+    color: '#2563eb',
+  },
+  sigDoneText: {
+    color: '#059669',
   },
   modalActions: {
     width: '100%',
@@ -390,6 +502,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
+  },
+  disabledSubmit: {
+    backgroundColor: '#94a3b8',
+    opacity: 0.6,
   },
   modalSubmitText: {
     color: '#ffffff',

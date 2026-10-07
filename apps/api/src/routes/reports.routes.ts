@@ -24,3 +24,12 @@ reportsRouter.get('/flocks-fcr', async (req, res, next) => {
     next(err);
   }
 });
+
+reportsRouter.get('/summary', async (req, res, next) => {
+  try {
+    const summary = await ReportService.getFactorySummary();
+    res.json(createSuccessResponse(summary, req.requestId));
+  } catch (err) {
+    next(err);
+  }
+});

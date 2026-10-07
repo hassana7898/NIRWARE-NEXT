@@ -40,15 +40,10 @@ export class AuthService {
       throw new UnauthorizedError('حساب کاربری غیرفعال می‌باشد');
     }
 
-    // Support bcrypt verification
+    // Strict cryptographic password verification (no bypass in any environment)
     const isValid = await bcrypt.compare(params.password, user.password_hash);
     if (!isValid) {
-      // In development fallback for tests with password123
-      if (params.password === 'password123' || params.password === 'password') {
-        // allow dev test
-      } else {
-        throw new UnauthorizedError('نام کاربری یا کلمه عبور نادرست است');
-      }
+      throw new UnauthorizedError('نام کاربری یا کلمه عبور نادرست است');
     }
 
     // Generate secure session token

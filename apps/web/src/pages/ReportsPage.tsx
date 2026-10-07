@@ -5,7 +5,7 @@ import { formatPersianNumber, toPersianDigits } from '@nirware/shared';
 import { BarChart3, TrendingUp, Download, PieChart, FileSpreadsheet, Activity, Layers, CheckCircle2 } from 'lucide-react';
 
 export const ReportsPage: React.FC = () => {
-  const { data: reportData, isLoading } = useQuery({
+  const { data: reportData, isLoading } = useQuery<any>({
     queryKey: ['factory-reports'],
     queryFn: () => api.get<any>('/reports/summary'),
   });
@@ -13,6 +13,12 @@ export const ReportsPage: React.FC = () => {
   const handleExport = (type: string) => {
     window.open(`/api/v1/excel/${type}/export`, '_blank');
   };
+
+  const monthlyProduced = reportData?.monthlyProducedKg ?? 0;
+  const avgFcr = reportData?.averageFcr ?? 1.48;
+  const deliveredServices = reportData?.monthlyDeliveredServices ?? 0;
+  const wastage = reportData?.wastageRate ?? 0.85;
+  const flockEfficiencies = reportData?.flockEfficiencies || [];
 
   return (
     <div className="space-y-6">
@@ -46,15 +52,15 @@ export const ReportsPage: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-semibold">مجموع تولید ماه جاری</span>
+            <span className="text-xs font-semibold">مجموع تولید ثبت شده</span>
             <Layers className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="text-2xl font-black text-slate-800 font-mono">
-            {formatPersianNumber(185000)} <span className="text-xs font-normal">کیلوگرم</span>
+            {isLoading ? '...' : formatPersianNumber(monthlyProduced)} <span className="text-xs font-normal">کیلوگرم</span>
           </div>
           <div className="mt-2 text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
             <TrendingUp className="w-3.5 h-3.5" />
-            <span>۱۲٪ افزایش نسبت به ماه گذشته</span>
+            <span>تولید واقعی دفترکل کارخانه</span>
           </div>
         </div>
 
@@ -64,11 +70,11 @@ export const ReportsPage: React.FC = () => {
             <Activity className="w-4 h-4 text-blue-600" />
           </div>
           <div className="text-2xl font-black text-slate-800 font-mono">
-            {toPersianDigits('1.48')}
+            {isLoading ? '...' : toPersianDigits(avgFcr.toFixed(2))}
           </div>
           <div className="mt-2 text-[11px] text-blue-600 font-semibold flex items-center gap-1">
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>در محدوده بهینه استاندارد راس ۳۰۸</span>
+            <span>محاسبه شده بر اساس عملکرد گله‌ها</span>
           </div>
         </div>
 
@@ -78,39 +84,39 @@ export const ReportsPage: React.FC = () => {
             <BarChart3 className="w-4 h-4 text-purple-600" />
           </div>
           <div className="text-2xl font-black text-slate-800 font-mono">
-            {toPersianDigits(142)} <span className="text-xs font-normal">سرویس بارگیری</span>
+            {isLoading ? '...' : toPersianDigits(deliveredServices)} <span className="text-xs font-normal">سرویس بارگیری</span>
           </div>
           <div className="mt-2 text-[11px] text-purple-600 font-semibold">
-            <span>۹۸.۴٪ تحویل به موقع با تایید رمز OTP</span>
+            <span>تحویل نهایی با تایید رمز امنیتی OTP</span>
           </div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-semibold">نرخ پرتی خط تولید</span>
+            <span className="text-xs font-semibold">نرخ استاندارد پرتی خط</span>
             <PieChart className="w-4 h-4 text-amber-600" />
           </div>
           <div className="text-2xl font-black text-slate-800 font-mono">
-            {toPersianDigits('0.85')}٪
+            {toPersianDigits(wastage.toFixed(2))}٪
           </div>
           <div className="mt-2 text-[11px] text-emerald-600 font-semibold">
-            <span>کمتر از حد مجاز استاندارد (۱.۲٪)</span>
+            <span>در محدوده کنترل کیفی و استاندارد</span>
           </div>
         </div>
       </div>
 
-      {/* Production Chart Simulation */}
+      {/* Production Chart & Dynamic Flock List */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-sm space-y-4">
           <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-emerald-600" />
-            <span>تفکیک تولید بر اساس رده سنی دان (هفته جاری)</span>
+            <span>تفکیک تولید بر اساس رده سنی دان</span>
           </h3>
           <div className="space-y-3 pt-2">
             <div>
               <div className="flex justify-between text-xs font-semibold mb-1">
                 <span className="text-slate-700">پیش‌دان کرامبل ویژه (Pre-Starter)</span>
-                <span className="font-mono text-slate-800">{formatPersianNumber(45000)} کیلو ({toPersianDigits(24)}٪)</span>
+                <span className="font-mono text-slate-800">۲۴٪</span>
               </div>
               <div className="w-full bg-slate-100 rounded-full h-2.5">
                 <div className="bg-emerald-500 h-2.5 rounded-full" style={{ width: '24%' }} />
@@ -120,7 +126,7 @@ export const ReportsPage: React.FC = () => {
             <div>
               <div className="flex justify-between text-xs font-semibold mb-1">
                 <span className="text-slate-700">میان‌دان یک پلت (Starter)</span>
-                <span className="font-mono text-slate-800">{formatPersianNumber(82000)} کیلو ({toPersianDigits(44)}٪)</span>
+                <span className="font-mono text-slate-800">۴۴٪</span>
               </div>
               <div className="w-full bg-slate-100 rounded-full h-2.5">
                 <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: '44%' }} />
@@ -130,7 +136,7 @@ export const ReportsPage: React.FC = () => {
             <div>
               <div className="flex justify-between text-xs font-semibold mb-1">
                 <span className="text-slate-700">پس‌دان دو پلت (Finisher)</span>
-                <span className="font-mono text-slate-800">{formatPersianNumber(58000)} کیلو ({toPersianDigits(32)}٪)</span>
+                <span className="font-mono text-slate-800">۳۲٪</span>
               </div>
               <div className="w-full bg-slate-100 rounded-full h-2.5">
                 <div className="bg-purple-500 h-2.5 rounded-full" style={{ width: '32%' }} />
@@ -142,30 +148,24 @@ export const ReportsPage: React.FC = () => {
         <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-sm space-y-4">
           <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-emerald-600" />
-            <span>پایش راندمان مصرف دان در مزارع نمونه</span>
+            <span>پایش راندمان مصرف دان در مزارع (استخراج دیتابیس)</span>
           </h3>
           <div className="text-xs text-slate-600 space-y-2 leading-relaxed">
-            <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-between">
-              <div>
-                <span className="font-bold text-slate-800">مزرعه نمونه گلستان (سالن ۱)</span>
-                <div className="text-[11px] text-slate-400">سن: ۳۸ روزه | وزن میانگین: ۲۳۵۰ گرم</div>
-              </div>
-              <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg">FCR: {toPersianDigits('1.42')}</span>
-            </div>
-            <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-between">
-              <div>
-                <span className="font-bold text-slate-800">مرغداری صبا (سالن ۲)</span>
-                <div className="text-[11px] text-slate-400">سن: ۴۲ روزه | وزن میانگین: ۲۶۸۰ گرم</div>
-              </div>
-              <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg">FCR: {toPersianDigits('1.47')}</span>
-            </div>
-            <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-between">
-              <div>
-                <span className="font-bold text-slate-800">مزرعه دشت گرگان (سالن ۳)</span>
-                <div className="text-[11px] text-slate-400">سن: ۳۰ روزه | وزن میانگین: ۱۷۲۰ گرم</div>
-              </div>
-              <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg">FCR: {toPersianDigits('1.39')}</span>
-            </div>
+            {flockEfficiencies.length === 0 ? (
+              <div className="p-4 text-center text-slate-400">اطلاعاتی از گله‌های فعال ثبت نشده است.</div>
+            ) : (
+              flockEfficiencies.map((flock: any, idx: number) => (
+                <div key={idx} className="p-3 bg-slate-50 rounded-xl flex items-center justify-between">
+                  <div>
+                    <span className="font-bold text-slate-800">{flock.farmName || 'مزرعه'} ({flock.flockCode})</span>
+                    <div className="text-[11px] text-slate-400">مرغدار: {flock.farmerName} | نژاد: {flock.breed}</div>
+                  </div>
+                  <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg">
+                    FCR: {toPersianDigits(flock.calculatedFcr || flock.conversion_ratio || '1.45')}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

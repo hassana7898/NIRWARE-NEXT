@@ -4,12 +4,10 @@ import { createApp } from '../../apps/api/dist/app.js';
 import { AuthService } from '../../apps/api/dist/services/auth.service.js';
 import { query, pool } from '../../apps/api/dist/db/connection.js';
 
-describe('Idempotency - Idempotency-Key Duplicate Prevention', () => {
+describe('Idempotency - Idempotency-Key Duplicate Prevention & Concurrency Locks', () => {
   let authToken = '';
-  const app = createApp();
 
   test('Submitting request with Idempotency-Key caches response and replay does not create duplicates', async () => {
-    // 1. Authenticate
     const loginRes = await AuthService.login({
       username: 'manager',
       password: 'password123',
@@ -18,38 +16,48 @@ describe('Idempotency - Idempotency-Key Duplicate Prevention', () => {
 
     const idempotencyKey = `test-key-${Date.now()}`;
 
-    // Count categories before
-    const countBeforeRes = await query('SELECT COUNT(*)::int as count FROM product_categories');
-    const countBefore = countBeforeRes[0].count;
+    // 1. First atomic reservation
+    const res1 = await query(
+      `INSERT INTO idempotency_keys (key, user_id, endpoint, request_hash, status, locked_at, expires_at)
+       VALUES ($1, $2, $3, $4, 'PENDING', NOW(), NOW() + INTERVAL '24 hours')
+       ON CONFLICT (key) DO NOTHING
+       RETURNING id, status`,
+      [idempotencyKey, loginRes.user.id, '/api/v1/feed-orders', 'hash-test-123']
+    );
+    assert.equal(res1.length, 1);
+    assert.equal(res1[0].status, 'PENDING');
 
-    // Simulate first request via Express handle
-    const req1 = {
-      method: 'POST',
-      url: '/api/v1/products/categories',
-      originalUrl: '/api/v1/products/categories',
-      headers: {
-        'content-type': 'application/json',
-        authorization: `Bearer ${authToken}`,
-        'idempotency-key': idempotencyKey,
-      },
-      body: {
-        name: `دسته تستی ${Date.now()}`,
-        code: `CAT-TEST-${Date.now()}`,
-      },
-    };
+    // 2. Concurrent duplicate reservation with SAME key must be rejected (ON CONFLICT DO NOTHING returns 0 rows)
+    const res2 = await query(
+      `INSERT INTO idempotency_keys (key, user_id, endpoint, request_hash, status, locked_at, expires_at)
+       VALUES ($1, $2, $3, $4, 'PENDING', NOW(), NOW() + INTERVAL '24 hours')
+       ON CONFLICT (key) DO NOTHING
+       RETURNING id, status`,
+      [idempotencyKey, loginRes.user.id, '/api/v1/feed-orders', 'hash-test-123']
+    );
+    assert.equal(res2.length, 0, 'Concurrent insert must conflict and return 0 rows');
 
-    // We can test idempotency directly via API or HTTP
-    // Let's test the idempotency database table directly:
+    // 3. Complete the original operation
     await query(
-      `INSERT INTO idempotency_keys (key, endpoint, response_status, response_body, expires_at)
-       VALUES ($1, $2, $3, $4, NOW() + INTERVAL '1 hour')`,
-      [idempotencyKey, '/api/v1/products/categories', 201, JSON.stringify({ success: true, data: { id: 'cached-id' } })]
+      `UPDATE idempotency_keys
+       SET status = 'COMPLETED',
+           response_status = 201,
+           response_body = $1,
+           locked_at = NOW()
+       WHERE key = $2`,
+      [JSON.stringify({ success: true, data: { orderId: 'ord-conc-999' } }), idempotencyKey]
     );
 
-    // Verify key exists
-    const stored = await query('SELECT * FROM idempotency_keys WHERE key = $1', [idempotencyKey]);
-    assert.equal(stored.length, 1);
-    assert.equal(stored[0].response_status, 201);
+    // 4. Subsequent queries retrieve completed response without executing again
+    const completed = await query(
+      `SELECT status, response_status, response_body FROM idempotency_keys WHERE key = $1`,
+      [idempotencyKey]
+    );
+    assert.equal(completed.length, 1);
+    assert.equal(completed[0].status, 'COMPLETED');
+    assert.equal(completed[0].response_status, 201);
+    const body = completed[0].response_body;
+    assert.equal(body.data.orderId, 'ord-conc-999');
   });
 
   after(async () => {

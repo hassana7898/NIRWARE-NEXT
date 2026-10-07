@@ -8,16 +8,16 @@
 
 INSERT INTO users (id, username, password_hash, full_name, phone, role, is_active)
 VALUES
-  ('a0000000-0000-0000-0000-000000000001', 'superadmin', '$2b$10$xK7qQc2Xm1bE4F6uG8jYueP5mN9kL3vT7wZ1yH4sR6tU2vO8pM9qK', 'مدیر ارشد سامانه نیرور', '09121111111', 'SUPER_ADMIN', true),
-  ('a0000000-0000-0000-0000-000000000002', 'admin', '$2b$10$xK7qQc2Xm1bE4F6uG8jYueP5mN9kL3vT7wZ1yH4sR6tU2vO8pM9qK', 'مدیر سیستم', '09122222222', 'ADMIN', true),
-  ('a0000000-0000-0000-0000-000000000003', 'manager', '$2b$10$xK7qQc2Xm1bE4F6uG8jYueP5mN9kL3vT7wZ1yH4sR6tU2vO8pM9qK', 'مهندس صمدی (مدیر کارخانه)', '09123333333', 'MANAGER', true),
-  ('a0000000-0000-0000-0000-000000000004', 'scale_op', '$2b$10$xK7qQc2Xm1bE4F6uG8jYueP5mN9kL3vT7wZ1yH4sR6tU2vO8pM9qK', 'بهرام کاظمی (مسئول باسکول)', '09124444444', 'SCALE_OPERATOR', true),
-  ('a0000000-0000-0000-0000-000000000005', 'prod_op', '$2b$10$xK7qQc2Xm1bE4F6uG8jYueP5mN9kL3vT7wZ1yH4sR6tU2vO8pM9qK', 'حسین رضایی (مسئول تولید و پلت)', '09125555555', 'PRODUCTION_OPERATOR', true),
-  ('a0000000-0000-0000-0000-000000000006', 'farmer1', '$2b$10$xK7qQc2Xm1bE4F6uG8jYueP5mN9kL3vT7wZ1yH4sR6tU2vO8pM9qK', 'حاج مرتضی کشاورز', '09126666666', 'FARMER', true),
-  ('a0000000-0000-0000-0000-000000000007', 'farmer2', '$2b$10$xK7qQc2Xm1bE4F6uG8jYueP5mN9kL3vT7wZ1yH4sR6tU2vO8pM9qK', 'مهندس رضا مرادی', '09127777777', 'FARMER', true),
-  ('a0000000-0000-0000-0000-000000000008', 'driver1', '$2b$10$xK7qQc2Xm1bE4F6uG8jYueP5mN9kL3vT7wZ1yH4sR6tU2vO8pM9qK', 'علی حسینی (راننده ناوگان)', '09128888888', 'DRIVER', true),
-  ('a0000000-0000-0000-0000-000000000009', 'driver2', '$2b$10$xK7qQc2Xm1bE4F6uG8jYueP5mN9kL3vT7wZ1yH4sR6tU2vO8pM9qK', 'بهنام کریمی (راننده ناوگان)', '09129999999', 'DRIVER', true)
-ON CONFLICT (username) DO NOTHING;
+  ('a0000000-0000-0000-0000-000000000001', 'superadmin', '$2a$10$09rRjHGaZmNacR2TKjm49Olyqoip2qd/cbqyBxxYxb27FW65G7OpG', 'مدیر ارشد سامانه نیرور', '09121111111', 'SUPER_ADMIN', true),
+  ('a0000000-0000-0000-0000-000000000002', 'admin', '$2a$10$09rRjHGaZmNacR2TKjm49Olyqoip2qd/cbqyBxxYxb27FW65G7OpG', 'مدیر سیستم', '09122222222', 'ADMIN', true),
+  ('a0000000-0000-0000-0000-000000000003', 'manager', '$2a$10$09rRjHGaZmNacR2TKjm49Olyqoip2qd/cbqyBxxYxb27FW65G7OpG', 'مهندس صمدی (مدیر کارخانه)', '09123333333', 'MANAGER', true),
+  ('a0000000-0000-0000-0000-000000000004', 'scale_op', '$2a$10$09rRjHGaZmNacR2TKjm49Olyqoip2qd/cbqyBxxYxb27FW65G7OpG', 'بهرام کاظمی (مسئول باسکول)', '09124444444', 'SCALE_OPERATOR', true),
+  ('a0000000-0000-0000-0000-000000000005', 'prod_op', '$2a$10$09rRjHGaZmNacR2TKjm49Olyqoip2qd/cbqyBxxYxb27FW65G7OpG', 'حسین رضایی (مسئول تولید و پلت)', '09125555555', 'PRODUCTION_OPERATOR', true),
+  ('a0000000-0000-0000-0000-000000000006', 'farmer1', '$2a$10$09rRjHGaZmNacR2TKjm49Olyqoip2qd/cbqyBxxYxb27FW65G7OpG', 'حاج مرتضی کشاورز', '09126666666', 'FARMER', true),
+  ('a0000000-0000-0000-0000-000000000007', 'farmer2', '$2a$10$09rRjHGaZmNacR2TKjm49Olyqoip2qd/cbqyBxxYxb27FW65G7OpG', 'مهندس رضا مرادی', '09127777777', 'FARMER', true),
+  ('a0000000-0000-0000-0000-000000000008', 'driver1', '$2a$10$09rRjHGaZmNacR2TKjm49Olyqoip2qd/cbqyBxxYxb27FW65G7OpG', 'علی حسینی (راننده ناوگان)', '09128888888', 'DRIVER', true),
+  ('a0000000-0000-0000-0000-000000000009', 'driver2', '$2a$10$09rRjHGaZmNacR2TKjm49Olyqoip2qd/cbqyBxxYxb27FW65G7OpG', 'بهنام کریمی (راننده ناوگان)', '09129999999', 'DRIVER', true)
+ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash;
 
 -- 2. Farmers
 INSERT INTO farmers (id, user_id, full_name, business_name, national_id, mobile, address, contact_person, status)
@@ -127,7 +127,7 @@ VALUES
 ON CONFLICT (plate_number) DO NOTHING;
 
 -- 12. Feed Orders (Sample Orders demonstrating state machine)
-INSERT INTO feed_orders (id, order_number, farmer_id, flock_id, quota_id, productId, requested_quantity_kg, approved_quantity_kg, status, delivery_address, delivery_date_needed, notes)
+INSERT INTO feed_orders (id, order_number, farmer_id, flock_id, quota_id, product_id, requested_quantity_kg, approved_quantity_kg, status, delivery_address, delivery_date_needed, notes)
 VALUES
   ('80000000-0000-0000-0000-000000000001', 'ORD-1403-001', 'b0000000-0000-0000-0000-000000000001', 'e0000000-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000009', 10000, 10000, 'APPROVED', 'قزوین، شهرک صنعتی لیا، کیلومتر ۵ جاده بوئین زهرا، مزرعه البرز ۱', '2024-10-15', 'تحویل با بونکر حمل فله'),
   ('80000000-0000-0000-0000-000000000002', 'ORD-1403-002', 'b0000000-0000-0000-0000-000000000002', 'e0000000-0000-0000-0000-000000000002', 'f0000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000008', 5000, 5000, 'PENDING_APPROVAL', 'گیلان، رشت، جاده فومن، مزرعه کاسپین ۲', '2024-10-18', 'تحویل به صورت کیسه ۵۰ کیلویی')
