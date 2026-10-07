@@ -24,6 +24,11 @@ aiRouter.post('/assistant', async (req, res, next) => {
   }
 });
 
+aiRouter.get('/ocr-status', (req, res) => {
+  const status = AiService.getOcrProviderStatus();
+  res.json(createSuccessResponse(status, req.requestId));
+});
+
 aiRouter.post('/ocr-bill', upload.single('billImage'), async (req, res, next) => {
   try {
     const result = await AiService.processBillOcr({

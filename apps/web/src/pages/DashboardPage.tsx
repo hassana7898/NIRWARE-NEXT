@@ -141,12 +141,9 @@ export const DashboardPage: React.FC = () => {
           <div className="text-3xl font-black text-slate-900 mb-2">
             {formatPersianNumber(kpis?.totalFinishedFeedStockKg || 0)} <span className="text-sm font-normal text-slate-500">کیلوگرم</span>
           </div>
-          <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-            <div className="bg-brand-500 h-full rounded-full" style={{ width: '65%' }}></div>
-          </div>
           <div className="flex justify-between text-xs text-slate-500 mt-2">
-            <span>ظرفیت انبارش: ۱۰۰ تن</span>
-            <span className="font-semibold text-brand-700">۶۵٪ ظرفیت فعال</span>
+            <span>موجودی فیزیکی ثبت‌شده در کاردکس انبار</span>
+            <span className="font-semibold text-brand-700">سیلوهای دان پلت</span>
           </div>
         </div>
 
@@ -164,12 +161,9 @@ export const DashboardPage: React.FC = () => {
           <div className="text-3xl font-black text-slate-900 mb-2">
             {formatPersianNumber(kpis?.totalRawMaterialsStockKg || 0)} <span className="text-sm font-normal text-slate-500">کیلوگرم</span>
           </div>
-          <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-            <div className="bg-indigo-500 h-full rounded-full" style={{ width: '80%' }}></div>
-          </div>
           <div className="flex justify-between text-xs text-slate-500 mt-2">
             <span>ذرت، سویا، مکمل‌ها و روغن</span>
-            <span className="font-semibold text-indigo-700">وضعیت ذخیره پایدار</span>
+            <span className="font-semibold text-indigo-700">انبار نهاده‌های دامی</span>
           </div>
         </div>
       </div>

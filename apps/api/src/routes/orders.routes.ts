@@ -30,7 +30,8 @@ ordersRouter.get('/:id', async (req, res, next) => {
 ordersRouter.post('/', async (req, res, next) => {
   try {
     const data = createFeedOrderSchema.parse(req.body);
-    const order = await OrderService.createOrder(data, req.user!);
+    const idempotencyKey = req.headers['idempotency-key'] as string | undefined;
+    const order = await OrderService.createOrder(data, req.user!, idempotencyKey);
     res.status(201).json(createSuccessResponse(order, req.requestId));
   } catch (err) {
     next(err);

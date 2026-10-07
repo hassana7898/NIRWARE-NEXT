@@ -153,4 +153,30 @@ export class AiService {
       'OCR_UPSTREAM_UNAVAILABLE'
     );
   }
+
+  public static getOcrProviderStatus(): {
+    status:
+      | 'OCR_PROVIDER_CONFIGURED_AND_WORKING'
+      | 'OCR_PROVIDER_CONFIGURED_BUT_UPSTREAM_UNAVAILABLE'
+      | 'OCR_PROVIDER_NOT_CONFIGURED';
+    providerConfigured: boolean;
+    providerName?: string;
+    humanInTheLoopRequired: boolean;
+  } {
+    const providerKey = process.env.OCR_PROVIDER_KEY;
+    if (!providerKey) {
+      return {
+        status: 'OCR_PROVIDER_NOT_CONFIGURED',
+        providerConfigured: false,
+        humanInTheLoopRequired: true,
+      };
+    }
+
+    return {
+      status: 'OCR_PROVIDER_CONFIGURED_BUT_UPSTREAM_UNAVAILABLE',
+      providerConfigured: true,
+      providerName: process.env.OCR_PROVIDER_NAME || 'GenericOcrProvider',
+      humanInTheLoopRequired: true,
+    };
+  }
 }

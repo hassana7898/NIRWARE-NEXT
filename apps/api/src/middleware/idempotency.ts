@@ -2,6 +2,23 @@ import { Request, Response, NextFunction } from 'express';
 import { hashToken } from '@nirware/shared';
 import { queryOne, query } from '../db/connection.js';
 
+export async function completeIdempotencyInTransaction(
+  client: any,
+  key: string,
+  responseStatus: number,
+  responseBody: any
+): Promise<void> {
+  await client.query(
+    `UPDATE idempotency_keys
+     SET status = 'COMPLETED',
+         response_status = $1,
+         response_body = $2,
+         locked_at = NOW()
+     WHERE key = $3`,
+    [responseStatus, JSON.stringify(responseBody), key]
+  );
+}
+
 export function idempotencyMiddleware() {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const key = req.headers['idempotency-key'] as string;
@@ -9,10 +26,37 @@ export function idempotencyMiddleware() {
       return next();
     }
 
-    const userId = req.user ? req.user.id : null;
+    (req as any).idempotencyKey = key;
+
+    let userId = req.user ? req.user.id : null;
+    if (!userId && req.headers.authorization?.startsWith('Bearer ')) {
+      try {
+        const token = req.headers.authorization.split(' ')[1];
+        const tokenHash = hashToken(token);
+        const session = await queryOne<{
+          user_id: string;
+        }>(
+          `SELECT s.user_id
+           FROM sessions s
+           JOIN users u ON u.id = s.user_id
+           WHERE s.token_hash = $1
+             AND s.is_revoked = false
+             AND s.expires_at > NOW()
+             AND u.is_active = true`,
+          [tokenHash]
+        );
+        if (session) {
+          userId = session.user_id;
+        }
+      } catch {
+        // Fallback to anonymous, authMiddleware downstream will handle
+      }
+    }
+
     const canonicalEndpoint = (req.baseUrl + req.path).replace(/\/+$/, '') || '/';
+    const userScope = userId || 'anonymous';
     const requestHash = hashToken(
-      `${req.method}:${canonicalEndpoint}:${JSON.stringify(req.body || {})}`
+      `${userScope}:${req.method}:${canonicalEndpoint}:${JSON.stringify(req.body || {})}`
     );
 
     try {
@@ -43,7 +87,7 @@ export function idempotencyMiddleware() {
                      response_status = $1,
                      response_body = $2,
                      locked_at = NOW()
-                 WHERE key = $3`,
+                 WHERE key = $3 AND status != 'COMPLETED'`,
                 [res.statusCode, JSON.stringify(body), key]
               ).catch((err) => {
                 console.error('[Idempotency Finalization Error]', err);

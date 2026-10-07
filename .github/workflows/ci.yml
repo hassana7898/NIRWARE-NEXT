@@ -8,7 +8,7 @@ on:
 
 jobs:
   verify:
-    name: Typecheck, Test & Build
+    name: Clean Reproducible CI Matrix (Typecheck, Build & Verification)
     runs-on: ubuntu-latest
 
     services:
@@ -27,33 +27,41 @@ jobs:
           --health-retries 5
 
     steps:
-      - name: Checkout Code
+      - name: 1. Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20 LTS
+      - name: 2. Setup Node.js 20 LTS
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
 
-      - name: Install Monorepo Dependencies
-        run: npm install
+      - name: 3. Clean Monorepo Dependency Installation (npm ci)
+        run: npm ci
 
-      - name: Typecheck Entire Monorepo (API + Web + Mobile)
+      - name: 4. Static Typecheck (API + Web + Mobile)
         run: npm run typecheck
 
-      - name: Apply Database Migrations & Seeds
-        run: |
-          npm run db:migrate
-          npm run db:seed
-        env:
-          DATABASE_URL: postgres://postgres:postgres123@localhost:5432/nirware_next
+      - name: 5. Full Monorepo Production Build (Packages + API + Web Bundle)
+        run: npm run build
 
-      - name: Run Comprehensive Verification Test Matrix (10 Suites)
-        run: npm run test:all
+      - name: 6. Prepare Dedicated Isolated Test Database
+        run: |
+          psql -h localhost -U postgres -d postgres -c "CREATE DATABASE nirware_next_test;"
+          npm run db:migrate
         env:
+          PGPASSWORD: postgres123
+          DATABASE_URL: postgres://postgres:postgres123@localhost:5432/nirware_next_test
+
+      - name: 7. Apply Test Fixtures
+        run: npm run db:seed
+        env:
+          DATABASE_URL: postgres://postgres:postgres123@localhost:5432/nirware_next_test
+          ALLOW_PRODUCTION_SEED: 'true'
+
+      - name: 8. Run 22-Suite Comprehensive Verification Matrix
+        run: node tests/runner.js
+        env:
+          NODE_ENV: test
           DATABASE_URL: postgres://postgres:postgres123@localhost:5432/nirware_next
           TEST_DATABASE_URL: postgres://postgres:postgres123@localhost:5432/nirware_next_test
-
-      - name: Build All Monorepo Packages, API & Web Bundle
-        run: npm run build

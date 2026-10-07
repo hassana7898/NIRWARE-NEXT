@@ -3,6 +3,7 @@ import {
   NotFoundError,
   ValidationError,
   ForbiddenError,
+  createSuccessResponse,
 } from '@nirware/shared';
 import { OrderStateMachine, QuotaCalculator, AuthorizationPolicy } from '@nirware/domain';
 import { query, queryOne, transaction } from '../db/connection.js';
@@ -78,7 +79,8 @@ export class OrderService {
       deliveryDateNeeded: string;
       notes?: string;
     },
-    actor: AuthenticatedUser
+    actor: AuthenticatedUser,
+    idempotencyKey?: string
   ) {
     // If actor is farmer, force farmerId to match
     if (actor.role === UserRole.FARMER) {
@@ -150,6 +152,22 @@ export class OrderService {
         entityId: order.id,
         details: { orderNumber, requestedQuantityKg: data.requestedQuantityKg },
       });
+
+      // 5. Atomic Idempotency Finalization within the same database transaction
+      if (idempotencyKey) {
+        await client.query(
+          `UPDATE idempotency_keys
+           SET status = 'COMPLETED',
+               response_status = 201,
+               response_body = $1,
+               locked_at = NOW()
+           WHERE key = $2`,
+          [
+            JSON.stringify(createSuccessResponse(order)),
+            idempotencyKey,
+          ]
+        );
+      }
 
       return order;
     });

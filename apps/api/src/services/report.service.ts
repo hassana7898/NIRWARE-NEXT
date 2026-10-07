@@ -107,17 +107,20 @@ export class ReportService {
     let dateFilterProd = '';
     let dateFilterDel = '';
     let dateFilterInbound = '';
+    let dateFilterFlock = '';
 
     if (fromDate && toDate) {
       params.push(fromDate, toDate);
       dateFilterProd = ' AND pb.created_at >= $1 AND pb.created_at <= $2';
       dateFilterDel = ' AND created_at >= $1 AND created_at <= $2';
       dateFilterInbound = ' AND received_at >= $1 AND received_at <= $2';
+      dateFilterFlock = ' AND start_date >= $1 AND start_date <= $2';
     } else if (fromDate) {
       params.push(fromDate);
       dateFilterProd = ' AND pb.created_at >= $1';
       dateFilterDel = ' AND created_at >= $1';
       dateFilterInbound = ' AND received_at >= $1';
+      dateFilterFlock = ' AND start_date >= $1';
     }
 
     const prodRes = await queryOne(
@@ -134,27 +137,34 @@ export class ReportService {
       params
     );
 
-    const fcrRes = await queryOne(`
-      SELECT COALESCE(ROUND(AVG(NULLIF(conversion_ratio, 0))::numeric, 2), 0) as "avgFcr"
-      FROM flocks
-      WHERE conversion_ratio > 0
-    `);
+    const fcrRes = await queryOne(
+      `SELECT COALESCE(ROUND(AVG(NULLIF(conversion_ratio, 0))::numeric, 2), 0) as "avgFcr"
+       FROM flocks
+       WHERE conversion_ratio > 0 ${dateFilterFlock}`,
+      params
+    );
 
-    // Inbound wastage rate calculation: (SUM(shortage_kg + wastage_kg) / SUM(invoice_weight_kg)) * 100
+    // Inbound shortage & wastage rate calculation: (SUM(shortage_kg + wastage_kg) / SUM(invoice_weight_kg)) * 100
     const wastageRes = await queryOne(
       `SELECT
-         COALESCE(ROUND((SUM(shortage_kg + wastage_kg) * 100.0 / NULLIF(SUM(invoice_weight_kg), 0))::numeric, 2), 0) as "wastageRate"
+         COALESCE(ROUND((SUM(shortage_kg + wastage_kg) * 100.0 / NULLIF(SUM(invoice_weight_kg), 0))::numeric, 2), 0) as "inboundWastageRate"
        FROM inbound_remittances
        WHERE status = 'CONFIRMED' ${dateFilterInbound}`,
       params
     );
 
-    // Dynamic Product Distribution by Feed Formula
+    // Dynamic Product Distribution by Feed Formula using Window Function for exact range denominator
     const distributionRes = await query(
       `SELECT
          p.name as "productName",
          COALESCE(SUM(pb.actual_produced_quantity_kg), 0)::numeric as "producedKg",
-         COALESCE(ROUND((SUM(pb.actual_produced_quantity_kg) * 100.0 / NULLIF((SELECT SUM(actual_produced_quantity_kg) FROM production_batches WHERE status = 'COMPLETED'), 0))::numeric, 1), 0) as "percentage"
+         COALESCE(
+           ROUND(
+             (SUM(pb.actual_produced_quantity_kg) * 100.0 / NULLIF(SUM(SUM(pb.actual_produced_quantity_kg)) OVER(), 0))::numeric,
+             1
+           ),
+           0
+         ) as "percentage"
        FROM production_batches pb
        JOIN formulas f ON f.id = pb.formula_id
        JOIN products p ON p.id = f.product_id
@@ -170,7 +180,8 @@ export class ReportService {
       monthlyProducedKg: Number(prodRes?.monthlyProducedKg || 0),
       monthlyDeliveredServices: Number(delRes?.monthlyDeliveredServices || 0),
       averageFcr: Number(fcrRes?.avgFcr || 0),
-      wastageRate: Number(wastageRes?.wastageRate || 0),
+      wastageRate: Number(wastageRes?.inboundWastageRate || 0),
+      inboundWastageRate: Number(wastageRes?.inboundWastageRate || 0),
       productDistribution: distributionRes.map((d: any) => ({
         productName: d.productName,
         producedKg: Number(d.producedKg || 0),

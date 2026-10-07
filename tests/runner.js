@@ -27,10 +27,12 @@ const suites = [
   { id: '18', name: 'Docker Configuration Safety', file: 'tests/infra/docker-safety.test.js' },
   { id: '19', name: 'CI Reproducibility & DB Isolation', file: 'tests/infra/ci-reproducibility.test.js' },
   { id: '20', name: 'Mobile Expo Configuration', file: 'tests/mobile/mobile-config.test.js' },
+  { id: '21', name: 'Android Build Verification', file: 'tests/mobile/android-build-verification.test.js' },
+  { id: '22', name: 'OCR Provider Status', file: 'tests/security/ocr-provider-status.test.js' },
 ];
 
 console.log('========================================================================');
-console.log('       NIRWARE NEXT - 20/20 COMPREHENSIVE AUTOMATED VERIFICATION MATRIX ');
+console.log('       NIRWARE NEXT - 22/22 COMPREHENSIVE AUTOMATED VERIFICATION MATRIX ');
 console.log('========================================================================\n');
 
 let allPassed = true;

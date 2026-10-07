@@ -130,14 +130,14 @@ export const ReportsPage: React.FC = () => {
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-semibold">نرخ استاندارد پرتی خط</span>
+            <span className="text-xs font-semibold">نرخ کسری و افت نهاده‌های ورودی</span>
             <PieChart className="w-4 h-4 text-amber-600" />
           </div>
           <div className="text-2xl font-black text-slate-800 font-mono">
             {toPersianDigits(wastage.toFixed(2))}٪
           </div>
           <div className="mt-2 text-[11px] text-emerald-600 font-semibold">
-            <span>در محدوده کنترل کیفی و استاندارد</span>
+            <span>بر مبنای باسکول و فاکتور حواله‌ها</span>
           </div>
         </div>
       </div>
@@ -190,7 +190,11 @@ export const ReportsPage: React.FC = () => {
                     <div className="text-[11px] text-slate-400">مرغدار: {flock.farmerName} | نژاد: {flock.breed}</div>
                   </div>
                   <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg">
-                    FCR: {toPersianDigits(flock.calculatedFcr || flock.conversion_ratio || '1.45')}
+                    {flock.calculatedFcr || flock.conversion_ratio ? (
+                      `FCR: ${toPersianDigits(flock.calculatedFcr || flock.conversion_ratio)}`
+                    ) : (
+                      'داده‌ای ثبت نشده'
+                    )}
                   </span>
                 </div>
               ))

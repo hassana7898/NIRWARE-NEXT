@@ -78,8 +78,12 @@ export const LogisticsPage: React.FC = () => {
   const handleGenerateOtp = async (delId: string) => {
     try {
       const res: any = await api.post(`/logistics/deliveries/${delId}/otp`);
-      setLastGeneratedOtp(res.devOtpPreview);
-      alert(`کد تایید OTP با موفقیت صادر شد.\nکد تحویل مرغدار: ${res.devOtpPreview}`);
+      if (res?.devOtpPreview) {
+        setLastGeneratedOtp(res.devOtpPreview);
+        alert(`کد تایید OTP با موفقیت صادر شد.\n[محیط توسعه - کد تست: ${res.devOtpPreview}]`);
+      } else {
+        alert('کد تایید OTP با موفقیت برای شماره موبایل مرغدار ارسال شد.');
+      }
       queryClient.invalidateQueries({ queryKey: ['deliveries'] });
     } catch (err: any) {
       alert(err?.message || 'خطا در صدور کد OTP');

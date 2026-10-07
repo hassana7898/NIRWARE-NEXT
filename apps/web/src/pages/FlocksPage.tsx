@@ -100,7 +100,7 @@ export const FlocksPage: React.FC = () => {
             const fcr =
               flock.finalWeight && flock.finalWeight > 0 && flock.feedConsumed
                 ? (flock.feedConsumed / flock.finalWeight).toFixed(2)
-                : '1.45';
+                : null;
 
             return (
               <div
@@ -148,7 +148,7 @@ export const FlocksPage: React.FC = () => {
                     <div className="bg-emerald-50/60 p-3 rounded-xl border border-emerald-100">
                       <div className="text-xs text-emerald-700 font-medium">ضریب تبدیل (FCR)</div>
                       <div className="text-base font-black text-emerald-800 mt-0.5">
-                        {toPersianDigits(fcr)}
+                        {fcr ? toPersianDigits(fcr) : <span className="text-xs font-normal text-slate-400">ثبت نشده</span>}
                       </div>
                     </div>
                   </div>

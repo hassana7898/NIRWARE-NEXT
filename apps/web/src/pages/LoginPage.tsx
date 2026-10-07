@@ -5,8 +5,8 @@ import { api } from '../api/client';
 import { Lock, User, AlertCircle, ArrowLeft } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
-  const [username, setUsername] = useState('manager');
-  const [password, setPassword] = useState('password123');
+  const [username, setUsername] = useState(import.meta.env.DEV ? 'manager' : '');
+  const [password, setPassword] = useState(import.meta.env.DEV ? 'password123' : '');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -91,42 +91,44 @@ export const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        {/* Demo Fast Login Selector */}
-        <div className="mt-8 pt-6 border-t border-slate-100">
-          <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center mb-3">
-            ورود سریع با نقش‌های کاربری نمونه
+        {/* Demo Fast Login Selector (Dev Only) */}
+        {import.meta.env.DEV && (
+          <div className="mt-8 pt-6 border-t border-slate-100">
+            <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center mb-3">
+              ورود سریع محیط توسعه (حساب‌های نمونه)
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => setDemoUser('manager')}
+                className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium transition text-center"
+              >
+                مدیر کارخانه (Manager)
+              </button>
+              <button
+                type="button"
+                onClick={() => setDemoUser('farmer1')}
+                className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium transition text-center"
+              >
+                مرغدار (Farmer)
+              </button>
+              <button
+                type="button"
+                onClick={() => setDemoUser('driver1')}
+                className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium transition text-center"
+              >
+                راننده ناوگان (Driver)
+              </button>
+              <button
+                type="button"
+                onClick={() => setDemoUser('prod_op')}
+                className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium transition text-center"
+              >
+                مسئول تولید (Operator)
+              </button>
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <button
-              type="button"
-              onClick={() => setDemoUser('manager')}
-              className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium transition text-center"
-            >
-              مدیر کارخانه (Manager)
-            </button>
-            <button
-              type="button"
-              onClick={() => setDemoUser('farmer1')}
-              className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium transition text-center"
-            >
-              مرغدار (Farmer)
-            </button>
-            <button
-              type="button"
-              onClick={() => setDemoUser('driver1')}
-              className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium transition text-center"
-            >
-              راننده ناوگان (Driver)
-            </button>
-            <button
-              type="button"
-              onClick={() => setDemoUser('prod_op')}
-              className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium transition text-center"
-            >
-              مسئول تولید (Operator)
-            </button>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

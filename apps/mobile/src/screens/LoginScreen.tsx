@@ -16,8 +16,8 @@ interface LoginScreenProps {
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
-  const [username, setUsername] = useState('manager');
-  const [password, setPassword] = useState('password123');
+  const [username, setUsername] = useState(__DEV__ ? 'manager' : '');
+  const [password, setPassword] = useState(__DEV__ ? 'password123' : '');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (userToLogin = username, passToLogin = password) => {
@@ -77,44 +77,46 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           )}
         </TouchableOpacity>
 
-        {/* Quick Demo Switchers */}
-        <View style={styles.quickAccess}>
-          <Text style={styles.quickTitle}>ورود سریع (حساب‌های آزمایشی):</Text>
-          <View style={styles.quickRow}>
-            <TouchableOpacity
-              style={styles.quickBadge}
-              onPress={() => {
-                setUsername('manager');
-                setPassword('password123');
-                handleLogin('manager', 'password123');
-              }}
-            >
-              <Text style={styles.quickBadgeText}>مدیر کارخانه</Text>
-            </TouchableOpacity>
+        {/* Quick Demo Switchers (Dev Only) */}
+        {__DEV__ && (
+          <View style={styles.quickAccess}>
+            <Text style={styles.quickTitle}>ورود سریع توسعه (حساب‌های آزمایشی):</Text>
+            <View style={styles.quickRow}>
+              <TouchableOpacity
+                style={styles.quickBadge}
+                onPress={() => {
+                  setUsername('manager');
+                  setPassword('password123');
+                  handleLogin('manager', 'password123');
+                }}
+              >
+                <Text style={styles.quickBadgeText}>مدیر کارخانه</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.quickBadge}
-              onPress={() => {
-                setUsername('farmer1');
-                setPassword('password123');
-                handleLogin('farmer1', 'password123');
-              }}
-            >
-              <Text style={styles.quickBadgeText}>مرغدار (مزرعه)</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.quickBadge}
+                onPress={() => {
+                  setUsername('farmer1');
+                  setPassword('password123');
+                  handleLogin('farmer1', 'password123');
+                }}
+              >
+                <Text style={styles.quickBadgeText}>مرغدار (مزرعه)</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.quickBadge}
-              onPress={() => {
-                setUsername('driver1');
-                setPassword('password123');
-                handleLogin('driver1', 'password123');
-              }}
-            >
-              <Text style={styles.quickBadgeText}>راننده ناوگان</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.quickBadge}
+                onPress={() => {
+                  setUsername('driver1');
+                  setPassword('password123');
+                  handleLogin('driver1', 'password123');
+                }}
+              >
+                <Text style={styles.quickBadgeText}>راننده ناوگان</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        )}
       </View>
     </View>
   );

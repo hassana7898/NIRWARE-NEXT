@@ -30,9 +30,10 @@
         "CAMERA"
       ]
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
+    "platforms": [
+      "android",
+      "ios"
+    ],
     "plugins": []
   }
 }
