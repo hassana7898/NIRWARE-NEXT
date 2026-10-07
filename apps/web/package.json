@@ -1,0 +1,21 @@
+{
+  "name": "@nirware/web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nirware/api-client": "*",
+    "@nirware/config": "*",
+    "@nirware/contracts": "*",
+    "@nirware/domain": "*",
+    "@nirware/shared": "*",
+    "@nirware/ui": "*",
+    "@nirware/validation": "*"
+  }
+}

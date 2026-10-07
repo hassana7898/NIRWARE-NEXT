@@ -1,0 +1,21 @@
+{
+  "name": "@nirware/api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test dist/**/*.test.js"
+  },
+  "dependencies": {
+    "@nirware/config": "*",
+    "@nirware/contracts": "*",
+    "@nirware/domain": "*",
+    "@nirware/shared": "*",
+    "@nirware/validation": "*"
+  }
+}
