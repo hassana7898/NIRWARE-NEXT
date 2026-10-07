@@ -4,9 +4,18 @@
   "private": true,
   "main": "index.js",
   "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "build": "tsc -p tsconfig.json --noEmit false --outDir dist",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "expo": "~52.0.0",
+    "react-native": "0.76.5",
+    "expo-secure-store": "~14.0.0",
+    "expo-location": "~18.0.0",
+    "expo-camera": "~16.0.0",
+    "expo-status-bar": "~2.0.0",
     "@nirware/api-client": "*",
     "@nirware/config": "*",
     "@nirware/contracts": "*",

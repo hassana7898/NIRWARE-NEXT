@@ -1,49 +1,42 @@
 /**
- * Secure Storage Service for Mobile Credentials & Offline Cache
- * Utilizes expo-secure-store with safe fallback for headless/web runs
+ * Hardware-Backed Secure Storage Service for Mobile Credentials
+ * Strictly enforces expo-secure-store; fails closed without insecure memory fallback.
  */
 
-let memoryStorage: Record<string, string> = {};
-
 export class StorageService {
-  public static async setItem(key: string, value: string): Promise<void> {
+  private static async getSecureStore() {
     try {
-      // Dynamic import of expo-secure-store if available
       // @ts-ignore
       const SecureStore = await import('expo-secure-store');
       if (SecureStore && typeof SecureStore.setItemAsync === 'function') {
-        await SecureStore.setItemAsync(key, value);
-        return;
+        return SecureStore;
       }
     } catch {}
+    return null;
+  }
 
-    memoryStorage[key] = value;
+  public static async setItem(key: string, value: string): Promise<void> {
+    const SecureStore = await this.getSecureStore();
+    if (!SecureStore) {
+      throw new Error('SECURE_STORAGE_UNAVAILABLE: Hardware-backed secure storage is required for mobile security.');
+    }
+    await SecureStore.setItemAsync(key, value);
   }
 
   public static async getItem(key: string): Promise<string | null> {
-    try {
-      // @ts-ignore
-      const SecureStore = await import('expo-secure-store');
-      if (SecureStore && typeof SecureStore.getItemAsync === 'function') {
-        const val = await SecureStore.getItemAsync(key);
-        if (val) return val;
-      }
-    } catch {}
-
-    return memoryStorage[key] || null;
+    const SecureStore = await this.getSecureStore();
+    if (!SecureStore) {
+      return null;
+    }
+    return await SecureStore.getItemAsync(key);
   }
 
   public static async removeItem(key: string): Promise<void> {
-    try {
-      // @ts-ignore
-      const SecureStore = await import('expo-secure-store');
-      if (SecureStore && typeof SecureStore.deleteItemAsync === 'function') {
-        await SecureStore.deleteItemAsync(key);
-        return;
-      }
-    } catch {}
-
-    delete memoryStorage[key];
+    const SecureStore = await this.getSecureStore();
+    if (!SecureStore) {
+      return;
+    }
+    await SecureStore.deleteItemAsync(key);
   }
 
   public static async saveSession(token: string, user: any): Promise<void> {

@@ -33,7 +33,7 @@ export class OfflineQueueManager {
 
   public static enqueue(endpoint: string, body: any, method: 'POST' | 'PUT' | 'PATCH' = 'POST'): string {
     const queue = this.getQueue();
-    const id = `offline-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const id = `offline-${Date.now()}-${typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)}`;
     const mutation: QueuedMutation = {
       id,
       endpoint,

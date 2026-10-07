@@ -22,9 +22,9 @@ export class LocationService {
         return status === 'granted';
       }
     } catch {
-      // Fallback in headless / simulator environments
+      // Hardware location unavailable
     }
-    return true;
+    return false;
   }
 
   public static async getCurrentLocation(): Promise<GpsCoordinates | null> {
@@ -42,15 +42,12 @@ export class LocationService {
           timestamp: loc.timestamp || Date.now(),
         };
       }
-    } catch {}
+    } catch {
+      // Error fetching location
+    }
 
-    // Factory coordinates default for testing / simulator
-    return {
-      latitude: 36.8456,
-      longitude: 54.4392,
-      accuracy: 10,
-      timestamp: Date.now(),
-    };
+    // Zero fake coordinates in production: return null if hardware GPS unavailable
+    return null;
   }
 
   public static startTracking(onUpdate: (coords: GpsCoordinates) => void): void {

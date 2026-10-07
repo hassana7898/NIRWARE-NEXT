@@ -27,7 +27,9 @@ reportsRouter.get('/flocks-fcr', async (req, res, next) => {
 
 reportsRouter.get('/summary', async (req, res, next) => {
   try {
-    const summary = await ReportService.getFactorySummary();
+    const fromDate = typeof req.query.fromDate === 'string' ? req.query.fromDate : undefined;
+    const toDate = typeof req.query.toDate === 'string' ? req.query.toDate : undefined;
+    const summary = await ReportService.getFactorySummary(fromDate, toDate);
     res.json(createSuccessResponse(summary, req.requestId));
   } catch (err) {
     next(err);

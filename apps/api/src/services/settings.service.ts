@@ -1,4 +1,5 @@
 import { queryOne, query } from '../db/connection.js';
+import { AppError } from '@nirware/shared';
 import { AuditService } from './audit.service.js';
 
 export interface CompanySettings {
@@ -46,26 +47,11 @@ export class SettingsService {
     );
 
     if (!row) {
-      // Default fallback
-      return {
-        id: 'default',
-        companyName: 'شرکت تولید خوراک طیور نیروار گلستان',
-        legalName: 'صنایع خوراک دام و طیور نیروار (سهامی خاص)',
-        registrationNumber: '۱۴۲۸۵',
-        nationalId: '۱۰۱۰۰۵۴۸۹۲۱',
-        phone: '۰۱۷-۳۲۴۵۰۰۰۰',
-        email: 'info@nirware.ir',
-        factoryAddress: 'استان گلستان، کیلومتر ۵ جاده گرگان به آق‌قلا، شهرک صنعتی، فاز ۲',
-        officeAddress: 'گرگان، میدان شهدا، برج فناوری، طبقه ۴',
-        logoUrl: '/logo.svg',
-        signatoryManagerTitle: 'مدیر فنی و کارخانه',
-        signatoryManagerName: 'مهندس احسان حسینی',
-        signatoryScaleTitle: 'متصدی باسکول و کنترل کیفی',
-        signatoryScaleName: 'محمدرضا سمیعی',
-        signatoryDriverTitle: 'راننده ناوگان ترابری',
-        signatoryFarmerTitle: 'مرغدار تحویل‌گیرنده نهاده',
-        updatedAt: new Date().toISOString(),
-      };
+      throw new AppError(
+        'تنظیمات و اطلاعات حقوقی کارخانه در پایگاه‌داده پیکربندی نشده است.',
+        503,
+        'CONFIGURATION_REQUIRED'
+      );
     }
 
     return row;

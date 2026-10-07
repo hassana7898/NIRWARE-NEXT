@@ -9,8 +9,15 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
+if (process.env.NODE_ENV === 'production' && process.env.ALLOW_PRODUCTION_SEED !== 'true') {
+  console.error('[NIRWARE-SEEDER] FATAL: Running seeds in production is strictly forbidden to prevent polluting production data.');
+  process.exit(1);
+}
+
 const { Pool } = pg;
-const dbUrl = process.env.DATABASE_URL || 'postgres://postgres:postgres123@localhost:5432/nirware_next';
+const dbUrl = process.env.NODE_ENV === 'test'
+  ? (process.env.TEST_DATABASE_URL || 'postgres://postgres:postgres123@localhost:5432/nirware_next_test')
+  : (process.env.DATABASE_URL || 'postgres://postgres:postgres123@localhost:5432/nirware_next');
 
 const pool = new Pool({ connectionString: dbUrl });
 

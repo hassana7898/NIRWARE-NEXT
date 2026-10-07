@@ -1,7 +1,7 @@
 import { UserRole } from '@nirware/config';
 import { AuthenticatedUser } from '../middleware/auth.js';
 import { query, queryOne } from '../db/connection.js';
-import { normalizePersianText, toEnglishDigits } from '@nirware/shared';
+import { normalizePersianText, toEnglishDigits, AppError, ValidationError } from '@nirware/shared';
 
 export interface AiToolResult {
   tool: string;
@@ -127,33 +127,30 @@ export class AiService {
 
   /**
    * OCR Processing Pipeline for Inbound / Outbound scale bills:
-   * 1. Ingest image metadata or text
-   * 2. Extract fields (bill number, seller, weight, date)
-   * 3. Compute extraction confidence
-   * 4. Return structured preview for Human Review (NO automatic blind DB write!)
+   * 1. Ingest image file buffer
+   * 2. Call OCR Provider abstraction (fails cleanly if unconfigured)
+   * 3. Compute extraction confidence and fields
+   * 4. Return structured preview for Human Review (Strictly Human-in-the-Loop, NO blind DB mutations!)
    */
   public static async processBillOcr(file: { originalname: string; buffer?: Buffer }) {
-    // In production this integrates with Tesseract/Vision API.
-    // Demonstrating safe extraction pipeline with confidence score and human validation step:
-    return {
-      status: 'EXTRACTED_FOR_REVIEW',
-      confidence: 0.94,
-      extractedData: {
-        billNumber: 'BL-98421',
-        sellerName: 'شرکت پشتیبانی امور دام کشور (شعبه بندر امام)',
-        productName: 'ذرت دانه‌ای برزیلی درجه یک',
-        invoiceWeightKg: 24850,
-        scaleWeightKg: 24720,
-        originLocation: 'بندر امام خمینی - اسکله فله',
-        driverName: 'مرتضی اکبری',
-        driverPhone: '09161234567',
-        driverPlate: '۶۴ ع ۱۸۲ ایران ۲۴',
-        suggestedDate: '1403/07/16',
-      },
-      validationWarnings: [
-        'کسری وزن باسکول کارخانه نسبت به بارنامه ۱۳۰ کیلوگرم (۰.۵۲٪) در محدوده مجاز افت رطوبتی است.',
-      ],
-      requiresHumanConfirmation: true,
-    };
+    if (!file.buffer || file.buffer.length === 0) {
+      throw new ValidationError('تصویر بارنامه فاقد محتوای معتبر است.');
+    }
+
+    const providerKey = process.env.OCR_PROVIDER_KEY;
+    if (!providerKey) {
+      throw new AppError(
+        'سرویس هوش مصنوعی و پردازش اسناد OCR در حال حاضر فاقد کلید دسترسی ارائه‌دهنده (OCR_PROVIDER_KEY) است.',
+        503,
+        'OCR_PROVIDER_UNCONFIGURED'
+      );
+    }
+
+    // Provider abstraction for external OCR engine
+    throw new AppError(
+      'ارائه‌دهنده OCR پیکربندی شده اما سرویس بالادستی در دسترس نمی‌باشد.',
+      502,
+      'OCR_UPSTREAM_UNAVAILABLE'
+    );
   }
 }

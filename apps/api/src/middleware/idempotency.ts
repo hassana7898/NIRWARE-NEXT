@@ -10,8 +10,9 @@ export function idempotencyMiddleware() {
     }
 
     const userId = req.user ? req.user.id : null;
+    const canonicalEndpoint = (req.baseUrl + req.path).replace(/\/+$/, '') || '/';
     const requestHash = hashToken(
-      `${req.method}:${req.originalUrl}:${JSON.stringify(req.body || {})}`
+      `${req.method}:${canonicalEndpoint}:${JSON.stringify(req.body || {})}`
     );
 
     try {
@@ -24,11 +25,11 @@ export function idempotencyMiddleware() {
          VALUES ($1, $2, $3, $4, 'PENDING', NOW(), NOW() + INTERVAL '24 hours')
          ON CONFLICT (key) DO NOTHING
          RETURNING id, status`,
-        [key, userId, req.originalUrl, requestHash]
+        [key, userId, canonicalEndpoint, requestHash]
       );
 
-      // 2. If reservation succeeded, current request holds the exclusive lock
-      if (reservation) {
+      // Helper to attach response-interceptor for finalizing idempotency
+      const attachFinalizer = () => {
         let isFinalized = false;
         const originalJson = res.json.bind(res);
 
@@ -57,11 +58,15 @@ export function idempotencyMiddleware() {
           }
           return originalJson(body);
         };
+      };
 
+      // 2. If reservation succeeded, current request holds the exclusive lock
+      if (reservation) {
+        attachFinalizer();
         return next();
       }
 
-      // 3. Conflict occurred: Key already exists. Check status
+      // 3. Conflict occurred: Key already exists. Check status and hash
       const existing = await queryOne<{
         status: string;
         request_hash: string;
@@ -79,12 +84,26 @@ export function idempotencyMiddleware() {
         return next();
       }
 
+      // 4. Enforce Payload Integrity: Same Key with DIFFERENT payload is strictly forbidden
+      if (existing.request_hash && existing.request_hash !== requestHash) {
+        res.status(409).json({
+          success: false,
+          error: {
+            code: 'IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_REQUEST',
+            message: 'کلید یکتای ارائه‌شده قبلاً با درخواست و پارامترهای متفاوتی استفاده شده است.',
+          },
+        });
+        return;
+      }
+
+      // 5. If COMPLETED, return cached response with replay header
       if (existing.status === 'COMPLETED') {
         res.setHeader('X-Idempotent-Replay', 'true');
         res.status(existing.response_status).json(existing.response_body);
         return;
       }
 
+      // 6. If PENDING, check lock age for active vs stale
       if (existing.status === 'PENDING') {
         const lockAgeMs = Date.now() - new Date(existing.locked_at).getTime();
         // If lock is active within 30 seconds, block duplicate concurrent execution
@@ -99,20 +118,59 @@ export function idempotencyMiddleware() {
           return;
         }
 
-        // Stale lock takeover if worker died mid-flight
-        await query(
-          `UPDATE idempotency_keys SET locked_at = NOW() WHERE key = $1`,
-          [key]
+        // Stale lock takeover via Compare-And-Swap (CAS)
+        const takeover = await queryOne<{ id: string }>(
+          `UPDATE idempotency_keys
+           SET locked_at = NOW(),
+               status = 'PENDING',
+               request_hash = $2
+           WHERE key = $1
+             AND status = 'PENDING'
+             AND locked_at < NOW() - INTERVAL '30 seconds'
+           RETURNING id`,
+          [key, requestHash]
         );
+
+        if (!takeover) {
+          res.status(409).json({
+            success: false,
+            error: {
+              code: 'CONCURRENT_IDEMPOTENT_OPERATION',
+              message: 'عملیات دیگری با این کلید یکتا هم‌اکنون در حال پردازش است. لطفاً منتظر بمانید.',
+            },
+          });
+          return;
+        }
+
+        attachFinalizer();
         return next();
       }
 
-      // If previous attempt FAILED, allow fresh retry
+      // 7. If previous attempt FAILED, allow fresh retry via CAS takeover
       if (existing.status === 'FAILED') {
-        await query(
-          `UPDATE idempotency_keys SET status = 'PENDING', locked_at = NOW() WHERE key = $1`,
-          [key]
+        const retryTakeover = await queryOne<{ id: string }>(
+          `UPDATE idempotency_keys
+           SET status = 'PENDING',
+               locked_at = NOW(),
+               request_hash = $2
+           WHERE key = $1
+             AND status = 'FAILED'
+           RETURNING id`,
+          [key, requestHash]
         );
+
+        if (!retryTakeover) {
+          res.status(409).json({
+            success: false,
+            error: {
+              code: 'CONCURRENT_IDEMPOTENT_OPERATION',
+              message: 'عملیات دیگری هم‌اکنون این کلید را مجدداً رزرو کرده است.',
+            },
+          });
+          return;
+        }
+
+        attachFinalizer();
         return next();
       }
 

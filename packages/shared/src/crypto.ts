@@ -29,8 +29,7 @@ export function generateSecureOtp(length = 6): string {
     // ignore
   }
 
-  const fallback = min + Math.floor(Math.random() * range);
-  return fallback.toString();
+  throw new Error('CRYPTOGRAPHIC_RANDOMNESS_UNAVAILABLE: Secure random number generator is required.');
 }
 
 /**

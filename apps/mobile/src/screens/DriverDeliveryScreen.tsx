@@ -59,8 +59,9 @@ export const DriverDeliveryScreen: React.FC<DriverDeliveryScreenProps> = ({ user
     try {
       const coords = await LocationService.getCurrentLocation();
       await mobileApi.post(`/deliveries/${deliveryId}/start-transit`, {
-        latitude: coords?.latitude,
-        longitude: coords?.longitude,
+        latitude: coords ? coords.latitude : null,
+        longitude: coords ? coords.longitude : null,
+        gpsStatus: coords ? 'AVAILABLE' : 'UNAVAILABLE',
       });
       Alert.alert('شروع حمل بار', 'وضعیت بارنامه به «در مسیر حمل به سوی مرغداری» تغییر یافت.');
       loadData();
@@ -82,8 +83,9 @@ export const DriverDeliveryScreen: React.FC<DriverDeliveryScreenProps> = ({ user
       await mobileApi.post(`/deliveries/${selectedDelivery.id}/confirm`, {
         otp: otpInput.trim(),
         signature: capturedSignature,
-        latitude: coords?.latitude,
-        longitude: coords?.longitude,
+        latitude: coords ? coords.latitude : null,
+        longitude: coords ? coords.longitude : null,
+        gpsStatus: coords ? 'AVAILABLE' : 'UNAVAILABLE',
       });
 
       Alert.alert('تأیید نهایی', 'رمز OTP راستی‌آزمایی شد و رسید تحویل با موفقیت ثبت و نهایی گردید.');

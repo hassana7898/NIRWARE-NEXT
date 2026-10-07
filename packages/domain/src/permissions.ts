@@ -89,4 +89,24 @@ export class AuthorizationPolicy {
       throw new ForbiddenError('شما مجاز به دسترسی به این محموله یا بارنامه نیستید');
     }
   }
+
+  public static canManageSettings(user: AuthUser): boolean {
+    return ([UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER] as UserRole[]).includes(user.role);
+  }
+
+  public static assertCanManageSettings(user: AuthUser): void {
+    if (!this.canManageSettings(user)) {
+      throw new ForbiddenError('فقط مدیران ارشد و مدیر کارخانه مجاز به تغییر تنظیمات هستند');
+    }
+  }
+
+  public static canExecuteProduction(user: AuthUser): boolean {
+    return ([UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.PRODUCTION_OPERATOR] as UserRole[]).includes(user.role);
+  }
+
+  public static assertCanExecuteProduction(user: AuthUser): void {
+    if (!this.canExecuteProduction(user)) {
+      throw new ForbiddenError('شما دسترسی به اجرای خط تولید کارخانه را ندارید');
+    }
+  }
 }
