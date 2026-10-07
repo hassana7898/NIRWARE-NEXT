@@ -1,0 +1,59 @@
+name: NIRWARE NEXT CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  verify:
+    name: Typecheck, Test & Build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres123
+          POSTGRES_DB: nirware_next
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Monorepo Dependencies
+        run: npm install
+
+      - name: Typecheck Entire Monorepo (API + Web + Mobile)
+        run: npm run typecheck
+
+      - name: Apply Database Migrations & Seeds
+        run: |
+          npm run db:migrate
+          npm run db:seed
+        env:
+          DATABASE_URL: postgres://postgres:postgres123@localhost:5432/nirware_next
+
+      - name: Run Comprehensive Verification Test Matrix (10 Suites)
+        run: npm run test:all
+        env:
+          DATABASE_URL: postgres://postgres:postgres123@localhost:5432/nirware_next
+          TEST_DATABASE_URL: postgres://postgres:postgres123@localhost:5432/nirware_next_test
+
+      - name: Build All Monorepo Packages, API & Web Bundle
+        run: npm run build

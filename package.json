@@ -18,7 +18,9 @@
     "test:all": "node tests/runner.js",
     "start:api": "npm --workspace=@nirware/api run start",
     "dev:api": "npm --workspace=@nirware/api run dev",
-    "dev:web": "npm --workspace=@nirware/web run dev"
+    "dev:web": "npm --workspace=@nirware/web run dev",
+    "db:migrate": "node database/scripts/migrate.js",
+    "db:seed": "node database/scripts/seed.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

@@ -16,6 +16,7 @@ const suites = [
   { name: 'Concurrency - Production Concurrency', file: 'tests/concurrency/production-concurrency.test.js' },
   { name: 'Idempotency - Idempotency-Key Header', file: 'tests/idempotency/idempotency.test.js' },
   { name: 'Golden E2E - Factory to Farmer Lifecycle', file: 'tests/e2e/golden-workflow.test.js' },
+  { name: 'Web PWA - Production Build & Assets Smoke', file: 'tests/e2e/web-build-smoke.test.js' },
 ];
 
 console.log('===============================================================');
