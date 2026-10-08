@@ -20,7 +20,7 @@
     },
     "android": {
       "package": "com.nirware.next",
-      "versionCode": 5,
+      "versionCode": 6,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f172a"
