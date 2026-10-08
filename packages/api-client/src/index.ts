@@ -22,6 +22,10 @@ export class ApiClient {
     this.onUnauthorized = config.onUnauthorized;
   }
 
+  public getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
   public setBaseUrl(url: string): void {
     this.baseUrl = url.replace(/\/$/, '');
   }
@@ -48,10 +52,30 @@ export class ApiClient {
       headers.set('Idempotency-Key', options.idempotencyKey);
     }
 
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        ...options,
+        headers,
+      });
+    } catch (networkErr: any) {
+      const isNetworkError =
+        networkErr?.name === 'TypeError' ||
+        networkErr?.message?.includes('Network request failed') ||
+        networkErr?.code === 'ECONNREFUSED' ||
+        networkErr?.code === 'ENOTFOUND' ||
+        networkErr?.code === 'ETIMEDOUT';
+
+      if (isNetworkError) {
+        throw new AppError(
+          `عدم برقراری ارتباط با سرور سامانه (${this.baseUrl}). لطفاً از روشن بودن سرور و اتصال اینترنت دستگاه اطمینان حاصل فرمایید.`,
+          0,
+          'NETWORK_UNREACHABLE',
+          { targetUrl: url, originalMessage: networkErr?.message }
+        );
+      }
+      throw networkErr;
+    }
 
     if (response.status === 401) {
       if (this.onUnauthorized) {

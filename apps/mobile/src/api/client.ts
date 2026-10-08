@@ -22,7 +22,17 @@ export const mobileApi = new ApiClient({
   },
 });
 
-// Fail-closed enforcement: if EXPO_PUBLIC_API_URL is missing, block requests immediately with a clear error
+export const setMobileApiBaseUrl = (newUrl: string) => {
+  mobileApi.setBaseUrl(newUrl);
+  // Restore original prototype methods if they were blocked by fail-closed
+  delete (mobileApi as any).get;
+  delete (mobileApi as any).post;
+  delete (mobileApi as any).put;
+  delete (mobileApi as any).patch;
+  delete (mobileApi as any).delete;
+};
+
+// Fail-closed enforcement: if initial URL is missing, block requests immediately with a clear error
 if (!config.isValid) {
   const failClosed = () => {
     throw new ApiConfigurationError(

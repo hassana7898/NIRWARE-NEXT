@@ -59,4 +59,16 @@ export class StorageService {
     await this.removeItem('nirware_token');
     await this.removeItem('nirware_user');
   }
+
+  public static async getCustomApiUrl(): Promise<string | null> {
+    return await this.getItem('nirware_custom_api_url');
+  }
+
+  public static async setCustomApiUrl(url: string | null): Promise<void> {
+    if (url && url.trim()) {
+      await this.setItem('nirware_custom_api_url', url.trim());
+    } else {
+      await this.removeItem('nirware_custom_api_url');
+    }
+  }
 }

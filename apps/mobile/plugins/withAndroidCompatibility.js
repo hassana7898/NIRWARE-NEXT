@@ -11,11 +11,12 @@ const {
  * 3. Sets expo.useLegacyPackaging=true (compatible with AGP 8.1+).
  */
 const withAndroidCompatibility = (config) => {
-  // 1. AndroidManifest: Force extractNativeLibs="true"
+  // 1. AndroidManifest: Force extractNativeLibs="true" and enable cleartext traffic for local/preview network access
   config = withAndroidManifest(config, (modConfig) => {
     const mainApplication = modConfig.modResults.manifest.application?.[0];
     if (mainApplication) {
       mainApplication.$['android:extractNativeLibs'] = 'true';
+      mainApplication.$['android:usesCleartextTraffic'] = 'true';
     }
     return modConfig;
   });

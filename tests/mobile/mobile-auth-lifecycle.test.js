@@ -232,6 +232,7 @@ describe('Mobile Authentication Lifecycle & Bootstrap - Real Wire Protocol', () 
   });
 
   // 9. Guarded API Bootstrap Endpoint
+  // 9. Guarded API Bootstrap Endpoint
   test('9. Guarded API Bootstrap: Rejects bootstrap when active admins exist (403 Forbidden)', async () => {
     const res = await fetch(`${baseUrl}/auth/bootstrap`, {
       method: 'POST',
@@ -249,5 +250,65 @@ describe('Mobile Authentication Lifecycle & Bootstrap - Real Wire Protocol', () 
     const body = await res.json();
     assert.equal(body.success, false);
     assert.match(body.error.message, /سامانه از قبل دارای مدیر فعال است/);
+  });
+
+  // 10. Health Check Connectivity
+  test('10. Health Check: GET /health returns 200 OK for live mobile connectivity checks', async () => {
+    const res = await fetch(`${baseUrl}/health`);
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.success, true);
+    assert.equal(body.data.status, 'UP');
+  });
+
+  // 11. Controlled Network Unreachable Error
+  test('11. Controlled Network Error: ApiClient transforms unreachable host into NETWORK_UNREACHABLE AppError', async () => {
+    const { ApiClient } = await import('../../packages/api-client/dist/index.js');
+    const unreachableClient = new ApiClient({
+      baseUrl: 'http://127.0.0.1:59999/api/v1', // Unbound port
+    });
+
+    await assert.rejects(
+      async () => {
+        await unreachableClient.post('/auth/login', { username: 'test', password: '123' });
+      },
+      (err) => {
+        assert.equal(err.code, 'NETWORK_UNREACHABLE');
+        assert.match(err.message, /عدم برقراری ارتباط با سرور سامانه/);
+        assert.ok(err.details?.targetUrl.includes('59999'));
+        return true;
+      }
+    );
+  });
+
+  // 12. ManagerDashboard Real API Data Loading
+  test('12. ManagerDashboard Data: Authenticated Manager loads real orders and KPI metrics', async () => {
+    // 1. Login as manager
+    const loginRes = await fetch(`${baseUrl}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'manager', password: 'password123' }),
+    });
+    const loginData = await loginRes.json();
+    const token = loginData.data.token;
+
+    // 2. Load orders
+    const ordersRes = await fetch(`${baseUrl}/orders`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    assert.equal(ordersRes.status, 200);
+    const ordersData = await ordersRes.json();
+    assert.equal(ordersData.success, true);
+    assert.ok(Array.isArray(ordersData.data));
+
+    // 3. Load reports KPIs (as consumed by ManagerDashboardScreen)
+    const kpisRes = await fetch(`${baseUrl}/reports/kpis`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    assert.equal(kpisRes.status, 200);
+    const kpisData = await kpisRes.json();
+    assert.equal(kpisData.success, true);
+    assert.ok(kpisData.data.pendingOrdersCount !== undefined);
+    assert.ok(kpisData.data.activeDeliveriesCount !== undefined);
   });
 });

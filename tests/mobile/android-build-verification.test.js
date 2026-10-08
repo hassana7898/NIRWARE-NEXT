@@ -35,6 +35,7 @@ describe('Suite 21: Mobile Android Build & Native Readiness Verification', () =>
     assert.ok(content.includes('v1SigningEnabled true'), 'plugin must enforce v1SigningEnabled');
     assert.ok(content.includes('v2SigningEnabled true'), 'plugin must enforce v2SigningEnabled');
     assert.ok(content.includes('extractNativeLibs'), 'plugin must enforce extractNativeLibs');
+    assert.ok(content.includes('usesCleartextTraffic'), 'plugin must enforce usesCleartextTraffic');
     assert.ok(content.includes('expo.useLegacyPackaging'), 'plugin must enforce useLegacyPackaging');
   });
 

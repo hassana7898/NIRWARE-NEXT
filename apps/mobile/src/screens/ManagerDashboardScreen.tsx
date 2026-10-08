@@ -30,16 +30,16 @@ export const ManagerDashboardScreen: React.FC<ManagerDashboardScreenProps> = ({ 
     try {
       setRefreshing(true);
       setErrorMessage(null);
-      const [ordersRes, summaryRes] = await Promise.all([
+      const [ordersRes, kpisRes] = await Promise.all([
         mobileApi.get<any[]>('/orders'),
-        mobileApi.get<any>('/reports/summary').catch(() => null),
+        mobileApi.get<any>('/reports/kpis').catch(() => null),
       ]);
       setOrders(ordersRes || []);
-      if (summaryRes?.kpis) {
+      if (kpisRes) {
         setKpis({
-          pendingOrdersCount: summaryRes.kpis.pendingOrdersCount || 0,
-          activeDeliveriesCount: summaryRes.kpis.activeDeliveriesCount || 0,
-          todayProducedKg: summaryRes.kpis.todayProducedKg || 0,
+          pendingOrdersCount: kpisRes.pendingOrdersCount || 0,
+          activeDeliveriesCount: kpisRes.activeDeliveriesCount || 0,
+          todayProducedKg: kpisRes.todayProducedKg || 0,
         });
       }
     } catch (e: any) {

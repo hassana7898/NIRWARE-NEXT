@@ -7,20 +7,21 @@ import { ManagerDashboardScreen } from './screens/ManagerDashboardScreen';
 import { FarmerOrdersScreen } from './screens/FarmerOrdersScreen';
 import { DriverDeliveryScreen } from './screens/DriverDeliveryScreen';
 import { StorageService } from './services/storage.service';
-import { setAuthToken, mobileApi } from './api/client';
+import { setAuthToken, mobileApi, setMobileApiBaseUrl } from './api/client';
 import { getApiConfig } from './config/api';
 
 export const App: React.FC = () => {
   const [user, setUser] = useState<MobileUser | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
-  const apiConfig = getApiConfig();
+  const [hasValidApi, setHasValidApi] = useState(getApiConfig().isValid);
 
   useEffect(() => {
     const restoreSession = async () => {
       try {
-        if (!apiConfig.isValid) {
-          setIsInitializing(false);
-          return;
+        const customUrl = await StorageService.getCustomApiUrl();
+        if (customUrl) {
+          setMobileApiBaseUrl(customUrl);
+          setHasValidApi(true);
         }
         const session = await StorageService.getSession();
         if (session?.token && session?.user) {
@@ -34,7 +35,7 @@ export const App: React.FC = () => {
       }
     };
     restoreSession();
-  }, [apiConfig.isValid]);
+  }, []);
 
   const handleLoginSuccess = async (loggedInUser: MobileUser, token: string) => {
     await StorageService.saveSession(token, loggedInUser);
@@ -51,7 +52,8 @@ export const App: React.FC = () => {
     setUser(null);
   };
 
-  if (!apiConfig.isValid) {
+  if (!hasValidApi) {
+    const apiConfig = getApiConfig();
     return (
       <View style={[styles.container, styles.errorContainer]}>
         <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
