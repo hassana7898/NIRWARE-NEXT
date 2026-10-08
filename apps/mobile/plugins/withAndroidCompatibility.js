@@ -41,11 +41,11 @@ const withAndroidCompatibility = (config) => {
   config = withAppBuildGradle(config, (modConfig) => {
     let buildGradle = modConfig.modResults.contents;
 
-    // Inject v1SigningEnabled, v2SigningEnabled, and v3SigningEnabled into debug signingConfig
+    // Inject v1SigningEnabled and v2SigningEnabled into debug signingConfig
     if (!buildGradle.includes('v1SigningEnabled true')) {
       buildGradle = buildGradle.replace(
         /debug\s*\{([\s\S]*?keyPassword[^\n]*\n)/,
-        (m, p1) => `debug {${p1}            v1SigningEnabled true\n            v2SigningEnabled true\n            v3SigningEnabled true\n`
+        (m, p1) => `debug {${p1}            v1SigningEnabled true\n            v2SigningEnabled true\n            try { enableV3Signing = true } catch (Throwable ignored) {}\n`
       );
     }
 
@@ -53,12 +53,7 @@ const withAndroidCompatibility = (config) => {
     if (!buildGradle.includes('signingConfigs.all')) {
       buildGradle = buildGradle.replace(
         /(signingConfigs\s*\{[\s\S]*?\n\s*\})\s*(?=buildTypes)/,
-        (m, p1) => `${p1}\n    signingConfigs.all {\n        v1SigningEnabled true\n        v2SigningEnabled true\n        v3SigningEnabled true\n    }\n    `
-      );
-    } else if (!buildGradle.includes('v3SigningEnabled true')) {
-      buildGradle = buildGradle.replace(
-        /signingConfigs\.all\s*\{([^}]*)\}/,
-        (m, p1) => `signingConfigs.all {${p1}        v3SigningEnabled true\n    }`
+        (m, p1) => `${p1}\n    signingConfigs.all {\n        v1SigningEnabled true\n        v2SigningEnabled true\n        try { enableV3Signing = true } catch (Throwable ignored) {}\n    }\n    `
       );
     }
 
