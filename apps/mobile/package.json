@@ -5,9 +5,11 @@
   "main": "index.js",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
+    "android": "expo run:android",
     "build": "tsc -p tsconfig.json --noEmit false --outDir dist",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "ios": "expo run:ios",
+    "eas-build-post-install": "npm run --prefix ../.. build:packages"
   },
   "dependencies": {
     "expo": "~52.0.0",

@@ -34,6 +34,11 @@
       "android",
       "ios"
     ],
-    "plugins": []
+    "plugins": [],
+    "extra": {
+      "eas": {
+        "projectId": "859a834e-b6b2-44a9-9b2b-6bc4e6e1a19f"
+      }
+    }
   }
 }

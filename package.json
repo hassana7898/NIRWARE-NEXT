@@ -11,6 +11,8 @@
   "scripts": {
     "build": "npm run build:packages && npm run build:api && npm run build:web",
     "build:packages": "npm --workspace=@nirware/config run build && npm --workspace=@nirware/shared run build && npm --workspace=@nirware/domain run build && npm --workspace=@nirware/validation run build && npm --workspace=@nirware/contracts run build && npm --workspace=@nirware/ui run build && npm --workspace=@nirware/api-client run build",
+    "postinstall": "npm run build:packages",
+    "eas-build-post-install": "npm run build:packages",
     "build:api": "npm --workspace=@nirware/api run build",
     "build:web": "npm --workspace=@nirware/web run build",
     "typecheck": "npm --workspace=@nirware/api run typecheck && npm --workspace=@nirware/web run typecheck && npm --workspace=@nirware/mobile run typecheck",
