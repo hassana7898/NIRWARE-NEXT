@@ -20,6 +20,7 @@
     },
     "android": {
       "package": "com.nirware.next",
+      "versionCode": 2,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f172a"
@@ -34,7 +35,9 @@
       "android",
       "ios"
     ],
-    "plugins": [],
+    "plugins": [
+      "./plugins/withAndroidCompatibility.js"
+    ],
     "extra": {
       "eas": {
         "projectId": "859a834e-b6b2-44a9-9b2b-6bc4e6e1a19f"

@@ -16,10 +16,26 @@ describe('Suite 21: Mobile Android Build & Native Readiness Verification', () =>
     const appJson = JSON.parse(fs.readFileSync(appJsonPath, 'utf8'));
 
     assert.equal(appJson.expo.android?.package, 'com.nirware.next');
+    assert.ok(appJson.expo.android?.versionCode >= 1, 'versionCode must be >= 1');
     assert.ok(Array.isArray(appJson.expo.android?.permissions));
     assert.ok(appJson.expo.android.permissions.includes('ACCESS_FINE_LOCATION'));
     assert.ok(appJson.expo.android.permissions.includes('CAMERA'));
     assert.ok(appJson.expo.android.adaptiveIcon?.foregroundImage);
+    assert.ok(Array.isArray(appJson.expo.plugins), 'plugins array must exist');
+    assert.ok(
+      appJson.expo.plugins.includes('./plugins/withAndroidCompatibility.js'),
+      'app.json must include withAndroidCompatibility.js plugin'
+    );
+  });
+
+  test('withAndroidCompatibility plugin enforces v1+v2 signing and legacy packaging', () => {
+    const pluginPath = path.join(mobileDir, 'plugins/withAndroidCompatibility.js');
+    assert.ok(fs.existsSync(pluginPath), 'withAndroidCompatibility.js must exist');
+    const content = fs.readFileSync(pluginPath, 'utf8');
+    assert.ok(content.includes('v1SigningEnabled true'), 'plugin must enforce v1SigningEnabled');
+    assert.ok(content.includes('v2SigningEnabled true'), 'plugin must enforce v2SigningEnabled');
+    assert.ok(content.includes('extractNativeLibs'), 'plugin must enforce extractNativeLibs');
+    assert.ok(content.includes('expo.useLegacyPackaging'), 'plugin must enforce useLegacyPackaging');
   });
 
   test('EAS Build configuration (eas.json) defines preview and production profiles', () => {
