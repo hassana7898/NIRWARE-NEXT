@@ -8,7 +8,7 @@ const {
  * Expo Config Plugin for Maximum Android Device Compatibility & Installability:
  * 1. Enables both APK Signature Scheme v1 (JAR signing) and v2 (APK Signing Block).
  * 2. Forces android:extractNativeLibs="true" so native .so files are extracted to device storage.
- * 3. Sets expo.useLegacyPackaging=true and android.bundle.enableUncompressedNativeLibs=false.
+ * 3. Sets expo.useLegacyPackaging=true (compatible with AGP 8.1+).
  */
 const withAndroidCompatibility = (config) => {
   // 1. AndroidManifest: Force extractNativeLibs="true"
@@ -20,7 +20,7 @@ const withAndroidCompatibility = (config) => {
     return modConfig;
   });
 
-  // 2. gradle.properties: Force legacy packaging
+  // 2. gradle.properties: Force legacy packaging (remove obsolete AGP 8.1 flags)
   config = withGradleProperties(config, (modConfig) => {
     modConfig.modResults = modConfig.modResults.filter(
       (item) =>
@@ -32,11 +32,6 @@ const withAndroidCompatibility = (config) => {
       type: 'property',
       key: 'expo.useLegacyPackaging',
       value: 'true',
-    });
-    modConfig.modResults.push({
-      type: 'property',
-      key: 'android.bundle.enableUncompressedNativeLibs',
-      value: 'false',
     });
     return modConfig;
   });
