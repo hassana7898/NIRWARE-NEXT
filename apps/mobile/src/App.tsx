@@ -7,7 +7,7 @@ import { ManagerDashboardScreen } from './screens/ManagerDashboardScreen';
 import { FarmerOrdersScreen } from './screens/FarmerOrdersScreen';
 import { DriverDeliveryScreen } from './screens/DriverDeliveryScreen';
 import { StorageService } from './services/storage.service';
-import { setAuthToken } from './api/client';
+import { setAuthToken, mobileApi } from './api/client';
 import { getApiConfig } from './config/api';
 
 export const App: React.FC = () => {
@@ -43,6 +43,9 @@ export const App: React.FC = () => {
   };
 
   const handleLogout = async () => {
+    try {
+      await mobileApi.post('/auth/logout').catch(() => {});
+    } catch {}
     await StorageService.clearSession();
     setAuthToken(null);
     setUser(null);

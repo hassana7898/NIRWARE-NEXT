@@ -86,6 +86,8 @@ export class AuthService {
         phone: user.phone,
         role: user.role,
         isActive: user.is_active,
+        farmerId,
+        driverId,
       },
       token,
       farmerId,

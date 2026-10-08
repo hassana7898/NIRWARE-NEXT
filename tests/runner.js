@@ -29,10 +29,11 @@ const suites = [
   { id: '20', name: 'Mobile Expo Configuration', file: 'tests/mobile/mobile-config.test.js' },
   { id: '21', name: 'Android Build Verification', file: 'tests/mobile/android-build-verification.test.js' },
   { id: '22', name: 'OCR Provider Status', file: 'tests/security/ocr-provider-status.test.js' },
+  { id: '23', name: 'Mobile Auth Lifecycle & Bootstrap', file: 'tests/mobile/mobile-auth-lifecycle.test.js' },
 ];
 
 console.log('========================================================================');
-console.log('       NIRWARE NEXT - 22/22 COMPREHENSIVE AUTOMATED VERIFICATION MATRIX ');
+console.log('       NIRWARE NEXT - 23/23 COMPREHENSIVE AUTOMATED VERIFICATION MATRIX ');
 console.log('========================================================================\n');
 
 let allPassed = true;

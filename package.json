@@ -22,7 +22,8 @@
     "dev:api": "npm --workspace=@nirware/api run dev",
     "dev:web": "npm --workspace=@nirware/web run dev",
     "db:migrate": "node database/scripts/migrate.js",
-    "db:seed": "node database/scripts/seed.js"
+    "db:seed": "node database/scripts/seed.js",
+    "admin:bootstrap": "node database/scripts/bootstrap-admin.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

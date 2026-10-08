@@ -23,13 +23,24 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const handleLogin = async (userToLogin = username, passToLogin = password) => {
     setLoading(true);
     try {
-      const res = await mobileApi.post<{ token: string; user: MobileUser }>('/auth/login', {
+      const res = await mobileApi.post<{
+        token: string;
+        user: MobileUser;
+        farmerId?: string | null;
+        driverId?: string | null;
+      }>('/auth/login', {
         username: userToLogin,
         password: passToLogin,
       });
 
+      const loggedInUser: MobileUser = {
+        ...res.user,
+        farmerId: res.farmerId ?? res.user?.farmerId ?? null,
+        driverId: res.driverId ?? res.user?.driverId ?? null,
+      };
+
       setAuthToken(res.token);
-      onLoginSuccess(res.user, res.token);
+      onLoginSuccess(loggedInUser, res.token);
     } catch (err: any) {
       Alert.alert('خطای ورود', err.message || 'نام کاربری یا کلمه عبور نادرست است.');
     } finally {
