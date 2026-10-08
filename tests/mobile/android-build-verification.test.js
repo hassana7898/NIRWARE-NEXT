@@ -66,4 +66,14 @@ describe('Suite 21: Mobile Android Build & Native Readiness Verification', () =>
     const metadataPath = path.join(bundleDir, 'metadata.json');
     assert.ok(fs.existsSync(metadataPath), 'metadata.json must exist in exported mobile bundle');
   });
+
+  test('apps/mobile/index.js registers the root component via registerRootComponent for React Native startup', () => {
+    const indexPath = path.join(mobileDir, 'index.js');
+    assert.ok(fs.existsSync(indexPath), 'apps/mobile/index.js must exist');
+    const content = fs.readFileSync(indexPath, 'utf8');
+    assert.ok(
+      content.includes('registerRootComponent'),
+      'apps/mobile/index.js must call registerRootComponent to prevent Invariant Violation: "main" has not been registered'
+    );
+  });
 });
