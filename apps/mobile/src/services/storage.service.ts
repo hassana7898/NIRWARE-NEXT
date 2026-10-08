@@ -71,4 +71,21 @@ export class StorageService {
       await this.removeItem('nirware_custom_api_url');
     }
   }
+
+  public static async getDemoModeOverride(): Promise<boolean | null> {
+    const val = await this.getItem('nirware_demo_mode_override');
+    if (val === 'true') return true;
+    if (val === 'false') return false;
+    return null;
+  }
+
+  public static async setDemoModeOverride(enabled: boolean | null): Promise<void> {
+    if (enabled === true) {
+      await this.setItem('nirware_demo_mode_override', 'true');
+    } else if (enabled === false) {
+      await this.setItem('nirware_demo_mode_override', 'false');
+    } else {
+      await this.removeItem('nirware_demo_mode_override');
+    }
+  }
 }

@@ -13,15 +13,17 @@ import {
 } from 'react-native';
 import { mobileApi } from '../api/client';
 import { MobileUser, MobileDelivery } from '../types';
+import { UserRole } from '@nirware/config';
 import { LocationService } from '../services/location.service';
 import { SignaturePad } from '../components/SignaturePad';
 
 interface DriverDeliveryScreenProps {
   user: MobileUser;
   onLogout: () => void;
+  onSwitchRole?: (role: UserRole) => void;
 }
 
-export const DriverDeliveryScreen: React.FC<DriverDeliveryScreenProps> = ({ user, onLogout }) => {
+export const DriverDeliveryScreen: React.FC<DriverDeliveryScreenProps> = ({ user, onLogout, onSwitchRole }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,6 +115,34 @@ export const DriverDeliveryScreen: React.FC<DriverDeliveryScreenProps> = ({ user
           <Text style={styles.logoutBtnText}>خروج</Text>
         </TouchableOpacity>
       </View>
+      {/* Role Navigation Pill Bar (Enabled in Demo / Preview Mode) */}
+      {onSwitchRole && (
+        <View style={styles.roleSwitcherBar}>
+          <Text style={styles.roleSwitcherLabel}>پیش‌نمایش نقش‌ها:</Text>
+          <View style={styles.rolePillsRow}>
+            <TouchableOpacity
+              style={styles.rolePill}
+              onPress={() => onSwitchRole(UserRole.MANAGER)}
+            >
+              <Text style={styles.rolePillText}>🏢 مدیر کارخانه</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.rolePill, styles.rolePillActive]}
+              disabled
+            >
+              <Text style={[styles.rolePillText, styles.rolePillTextActive]}>🚚 راننده ناوگان</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.rolePill}
+              onPress={() => onSwitchRole(UserRole.FARMER)}
+            >
+              <Text style={styles.rolePillText}>🌾 مرغدار</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -524,5 +554,43 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontSize: 13,
     fontWeight: '600',
+  },
+  roleSwitcherBar: {
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  roleSwitcherLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748b',
+    textAlign: 'right',
+    marginBottom: 6,
+  },
+  rolePillsRow: {
+    flexDirection: 'row-reverse',
+    gap: 8,
+  },
+  rolePill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+  },
+  rolePillActive: {
+    backgroundColor: '#059669',
+    borderColor: '#059669',
+  },
+  rolePillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  rolePillTextActive: {
+    color: '#ffffff',
   },
 });

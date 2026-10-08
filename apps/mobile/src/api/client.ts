@@ -1,5 +1,7 @@
 import { ApiClient } from '@nirware/api-client';
 import { getApiConfig, ApiConfigurationError } from '../config/api';
+import { isDemoModeActive } from '../config/demo';
+import { DemoAdapter } from './demo.adapter';
 
 let currentAuthToken: string | null = null;
 
@@ -22,27 +24,64 @@ export const mobileApi = new ApiClient({
   },
 });
 
-export const setMobileApiBaseUrl = (newUrl: string) => {
-  mobileApi.setBaseUrl(newUrl);
-  // Restore original prototype methods if they were blocked by fail-closed
-  delete (mobileApi as any).get;
-  delete (mobileApi as any).post;
-  delete (mobileApi as any).put;
-  delete (mobileApi as any).patch;
-  delete (mobileApi as any).delete;
+// Preserve prototype methods bound to mobileApi instance
+const origGet = mobileApi.get.bind(mobileApi);
+const origPost = mobileApi.post.bind(mobileApi);
+const origPut = mobileApi.put.bind(mobileApi);
+const origPatch = mobileApi.patch.bind(mobileApi);
+const origDelete = mobileApi.delete.bind(mobileApi);
+
+// Wrap request methods with Demo Mode interception
+mobileApi.get = async function <T>(endpoint: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
+  if (isDemoModeActive()) {
+    return (await DemoAdapter.handleGet(endpoint)) as T;
+  }
+  if (!getApiConfig().isValid && !(mobileApi.getBaseUrl() && mobileApi.getBaseUrl().startsWith('http'))) {
+    throw new ApiConfigurationError(config.error || 'EXPO_PUBLIC_API_URL is not configured (Fail-Closed).');
+  }
+  return origGet(endpoint, params);
 };
 
-// Fail-closed enforcement: if initial URL is missing, block requests immediately with a clear error
-if (!config.isValid) {
-  const failClosed = () => {
-    throw new ApiConfigurationError(
-      config.error || 'EXPO_PUBLIC_API_URL is not configured. Request blocked (Fail-Closed).'
-    );
-  };
-  mobileApi.get = failClosed as any;
-  mobileApi.post = failClosed as any;
-  mobileApi.put = failClosed as any;
-  mobileApi.patch = failClosed as any;
-  mobileApi.delete = failClosed as any;
-}
+mobileApi.post = async function <T>(endpoint: string, body?: unknown, idempotencyKey?: string): Promise<T> {
+  if (isDemoModeActive()) {
+    return (await DemoAdapter.handlePost(endpoint, body)) as T;
+  }
+  if (!getApiConfig().isValid && !(mobileApi.getBaseUrl() && mobileApi.getBaseUrl().startsWith('http'))) {
+    throw new ApiConfigurationError(config.error || 'EXPO_PUBLIC_API_URL is not configured (Fail-Closed).');
+  }
+  return origPost(endpoint, body, idempotencyKey);
+};
 
+mobileApi.put = async function <T>(endpoint: string, body?: unknown): Promise<T> {
+  if (isDemoModeActive()) {
+    return (await DemoAdapter.handlePost(endpoint, body)) as T;
+  }
+  if (!getApiConfig().isValid && !(mobileApi.getBaseUrl() && mobileApi.getBaseUrl().startsWith('http'))) {
+    throw new ApiConfigurationError(config.error || 'EXPO_PUBLIC_API_URL is not configured (Fail-Closed).');
+  }
+  return origPut(endpoint, body);
+};
+
+mobileApi.patch = async function <T>(endpoint: string, body?: unknown): Promise<T> {
+  if (isDemoModeActive()) {
+    return (await DemoAdapter.handlePost(endpoint, body)) as T;
+  }
+  if (!getApiConfig().isValid && !(mobileApi.getBaseUrl() && mobileApi.getBaseUrl().startsWith('http'))) {
+    throw new ApiConfigurationError(config.error || 'EXPO_PUBLIC_API_URL is not configured (Fail-Closed).');
+  }
+  return origPatch(endpoint, body);
+};
+
+mobileApi.delete = async function <T>(endpoint: string): Promise<T> {
+  if (isDemoModeActive()) {
+    return (await DemoAdapter.handlePost(endpoint, undefined)) as T;
+  }
+  if (!getApiConfig().isValid && !(mobileApi.getBaseUrl() && mobileApi.getBaseUrl().startsWith('http'))) {
+    throw new ApiConfigurationError(config.error || 'EXPO_PUBLIC_API_URL is not configured (Fail-Closed).');
+  }
+  return origDelete(endpoint);
+};
+
+export const setMobileApiBaseUrl = (newUrl: string) => {
+  mobileApi.setBaseUrl(newUrl);
+};

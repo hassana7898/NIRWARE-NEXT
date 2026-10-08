@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, StatusBar, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, StatusBar, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { UserRole } from '@nirware/config';
 import { MobileUser } from './types';
 import { LoginScreen } from './screens/LoginScreen';
@@ -9,15 +9,18 @@ import { DriverDeliveryScreen } from './screens/DriverDeliveryScreen';
 import { StorageService } from './services/storage.service';
 import { setAuthToken, mobileApi, setMobileApiBaseUrl } from './api/client';
 import { getApiConfig } from './config/api';
+import { initDemoMode, isDemoModeActive, toggleDemoMode } from './config/demo';
 
 export const App: React.FC = () => {
   const [user, setUser] = useState<MobileUser | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [hasValidApi, setHasValidApi] = useState(getApiConfig().isValid);
+  const [activeRoleView, setActiveRoleView] = useState<UserRole | null>(null);
 
   useEffect(() => {
     const restoreSession = async () => {
       try {
+        await initDemoMode();
         const customUrl = await StorageService.getCustomApiUrl();
         if (customUrl) {
           setMobileApiBaseUrl(customUrl);
@@ -41,6 +44,7 @@ export const App: React.FC = () => {
     await StorageService.saveSession(token, loggedInUser);
     setAuthToken(token);
     setUser(loggedInUser);
+    setActiveRoleView(loggedInUser.role);
   };
 
   const handleLogout = async () => {
@@ -50,9 +54,13 @@ export const App: React.FC = () => {
     await StorageService.clearSession();
     setAuthToken(null);
     setUser(null);
+    setActiveRoleView(null);
   };
 
-  if (!hasValidApi) {
+  const isDemo = isDemoModeActive();
+
+  // If API URL is invalid AND demo mode is not active, display fail-closed card with demo mode option
+  if (!hasValidApi && !isDemo) {
     const apiConfig = getApiConfig();
     return (
       <View style={[styles.container, styles.errorContainer]}>
@@ -61,6 +69,17 @@ export const App: React.FC = () => {
           <Text style={styles.errorBadge}>پیکربندی ناقص (FAIL-CLOSED)</Text>
           <Text style={styles.errorTitle}>آدرس سرور API تنظیم نشده است</Text>
           <Text style={styles.errorMessage}>{apiConfig.error}</Text>
+
+          <TouchableOpacity
+            style={styles.demoBypassBtn}
+            onPress={async () => {
+              await toggleDemoMode(true);
+              setIsInitializing(false);
+            }}
+          >
+            <Text style={styles.demoBypassBtnText}>⚡ ورود به حالت دموی آفلاین (پیش‌نمایش UI)</Text>
+          </TouchableOpacity>
+
           <View style={styles.helpBox}>
             <Text style={styles.helpTitle}>راهنمای تنظیم محیطی (EXPO_PUBLIC_API_URL):</Text>
             <Text style={styles.helpText}>• شبیه‌ساز اندروید: http://10.0.2.2:4000/api/v1</Text>
@@ -80,17 +99,56 @@ export const App: React.FC = () => {
     );
   }
 
+  // Derive active persona for demo view switching
+  const effectiveRole = isDemo && activeRoleView ? activeRoleView : user?.role;
+  let effectiveUser: MobileUser | null = user;
+  if (user && isDemo && activeRoleView) {
+    if (activeRoleView === UserRole.DRIVER) {
+      effectiveUser = {
+        ...user,
+        role: UserRole.DRIVER,
+        fullName: user.username === 'driver1' ? user.fullName : 'آقای صادقی (راننده ترابری)',
+        driverId: 'drv-01',
+      };
+    } else if (activeRoleView === UserRole.FARMER) {
+      effectiveUser = {
+        ...user,
+        role: UserRole.FARMER,
+        fullName: user.username === 'farmer1' ? user.fullName : 'حاج رضا مرادی (مرغداری سبز)',
+        farmerId: 'far-01',
+      };
+    } else {
+      effectiveUser = {
+        ...user,
+        role: UserRole.MANAGER,
+        fullName: user.username === 'manager' ? user.fullName : 'مهندس حسینی (مدیر تولید و کارخانه)',
+      };
+    }
+  }
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle={user ? 'dark-content' : 'light-content'} backgroundColor={user ? '#ffffff' : '#0f172a'} />
-      {!user ? (
+      {!effectiveUser ? (
         <LoginScreen onLoginSuccess={handleLoginSuccess} />
-      ) : user.role === UserRole.DRIVER ? (
-        <DriverDeliveryScreen user={user} onLogout={handleLogout} />
-      ) : user.role === UserRole.FARMER ? (
-        <FarmerOrdersScreen user={user} onLogout={handleLogout} />
+      ) : effectiveRole === UserRole.DRIVER ? (
+        <DriverDeliveryScreen
+          user={effectiveUser}
+          onLogout={handleLogout}
+          onSwitchRole={isDemo ? setActiveRoleView : undefined}
+        />
+      ) : effectiveRole === UserRole.FARMER ? (
+        <FarmerOrdersScreen
+          user={effectiveUser}
+          onLogout={handleLogout}
+          onSwitchRole={isDemo ? setActiveRoleView : undefined}
+        />
       ) : (
-        <ManagerDashboardScreen user={user} onLogout={handleLogout} />
+        <ManagerDashboardScreen
+          user={effectiveUser}
+          onLogout={handleLogout}
+          onSwitchRole={isDemo ? setActiveRoleView : undefined}
+        />
       )}
     </View>
   );
@@ -141,6 +199,19 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: 'center',
     marginBottom: 20,
+  },
+  demoBypassBtn: {
+    backgroundColor: '#059669',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  demoBypassBtnText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
   },
   helpBox: {
     backgroundColor: '#0f172a',

@@ -13,14 +13,16 @@ import { mobileApi, setAuthToken, setMobileApiBaseUrl } from '../api/client';
 import { StorageService } from '../services/storage.service';
 import { getApiConfig } from '../config/api';
 import { MobileUser } from '../types';
+import { isDemoModeActive, toggleDemoMode } from '../config/demo';
 
 interface LoginScreenProps {
   onLoginSuccess: (user: MobileUser, token: string) => void;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
-  const [username, setUsername] = useState(__DEV__ ? 'manager' : '');
-  const [password, setPassword] = useState(__DEV__ ? 'password123' : '');
+  const [isDemo, setIsDemo] = useState(isDemoModeActive());
+  const [username, setUsername] = useState(isDemoModeActive() || __DEV__ ? 'manager' : '');
+  const [password, setPassword] = useState(isDemoModeActive() || __DEV__ ? 'password123' : '');
   const [loading, setLoading] = useState(false);
 
   // Runtime Server API URL State
@@ -31,6 +33,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   useEffect(() => {
+    const demo = isDemoModeActive();
+    setIsDemo(demo);
+    if (demo) {
+      setUsername('manager');
+      setPassword('password123');
+    }
     StorageService.getCustomApiUrl().then((stored) => {
       if (stored) {
         setCurrentApiUrl(stored);
@@ -128,7 +136,25 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       ) {
         Alert.alert(
           'خطای ارتباط با سرور',
-          `امکان برقراری ارتباط با سرور سامانه وجود ندارد.\n\n🌐 نشانی سرور: ${currentApiUrl}\n\nراهنما:\n• اتصال اینترنت یا شبکه Wi-Fi دستگاه را بررسی کنید.\n• از روشن بودن سرویس Backend کارخانه اطمینان حاصل فرمایید.\n• نشانی سرور را از بخش «تنظیم نشانی سرور» بررسی یا تغییر دهید.`
+          `امکان برقراری ارتباط با سرور سامانه وجود ندارد.\n\n🌐 نشانی سرور: ${currentApiUrl}\n\nجهت مشاهده و بررسی UI و امکانات می‌توانید بلافاصله وارد حالت دموی آفلاین شوید:`,
+          [
+            {
+              text: '⚡ ورود فوری به حالت دمو',
+              onPress: async () => {
+                await toggleDemoMode(true);
+                setIsDemo(true);
+                handleLogin('manager', 'password123');
+              },
+            },
+            {
+              text: 'تنظیم نشانی سرور',
+              onPress: () => setServerModalVisible(true),
+            },
+            {
+              text: 'انصراف',
+              style: 'cancel',
+            },
+          ]
         );
       } else {
         Alert.alert('خطای ورود', err.message || 'نام کاربری یا کلمه عبور نادرست است.');
@@ -146,6 +172,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       </View>
 
       <View style={styles.card}>
+        {/* Demo Mode Notice Banner */}
+        {isDemo && (
+          <View style={styles.demoBanner}>
+            <View style={styles.demoBannerHeader}>
+              <Text style={styles.demoBannerBadge}>آفلاین / UI PREVIEW</Text>
+              <Text style={styles.demoBannerTitle}>حالت پیش‌نمایش محلی (Demo)</Text>
+            </View>
+            <Text style={styles.demoBannerDesc}>
+              ورود مستقل از سرور با داده‌های واقعی کارخانه خوراک، خطوط پلت، سیلوها و ناوگان
+            </Text>
+          </View>
+        )}
+
         <Text style={styles.cardTitle}>ورود به سامانه همراه</Text>
 
         <Text style={styles.label}>نام کاربری</Text>
@@ -178,10 +217,54 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           )}
         </TouchableOpacity>
 
-        {/* Quick Demo Switchers (Dev Only) */}
-        {__DEV__ && (
+        {/* Quick Demo One-Tap Login Button */}
+        {isDemo && (
+          <TouchableOpacity
+            style={styles.quickDemoManagerBtn}
+            onPress={() => {
+              setUsername('manager');
+              setPassword('password123');
+              handleLogin('manager', 'password123');
+            }}
+            disabled={loading}
+          >
+            <Text style={styles.quickDemoManagerText}>⚡ ورود سریع مدیر کارخانه (یک لمس)</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Mode Selector Pill */}
+        <View style={styles.demoToggleContainer}>
+          <TouchableOpacity
+            style={[styles.demoTogglePill, isDemo && styles.demoTogglePillActive]}
+            onPress={async () => {
+              await toggleDemoMode(true);
+              setIsDemo(true);
+              setUsername('manager');
+              setPassword('password123');
+            }}
+          >
+            <Text style={[styles.demoToggleText, isDemo && styles.demoToggleTextActive]}>
+              {isDemo ? '✓ حالت دموی آفلاین' : 'حالت دمو'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.demoTogglePill, !isDemo && styles.demoTogglePillActive]}
+            onPress={async () => {
+              await toggleDemoMode(false);
+              setIsDemo(false);
+            }}
+          >
+            <Text style={[styles.demoToggleText, !isDemo && styles.demoToggleTextActive]}>
+              {!isDemo ? '✓ اتصال آنلاین سرور' : 'اتصال آنلاین سرور'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Quick Demo Switchers (Always shown in Demo Mode or Dev) */}
+        {(isDemo || __DEV__) && (
           <View style={styles.quickAccess}>
-            <Text style={styles.quickTitle}>ورود سریع توسعه (حساب‌های آزمایشی):</Text>
+            <Text style={styles.quickTitle}>سایر حساب‌های پیش‌فرض دمو:</Text>
             <View style={styles.quickRow}>
               <TouchableOpacity
                 style={styles.quickBadge}
@@ -197,23 +280,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               <TouchableOpacity
                 style={styles.quickBadge}
                 onPress={() => {
-                  setUsername('farmer1');
-                  setPassword('password123');
-                  handleLogin('farmer1', 'password123');
-                }}
-              >
-                <Text style={styles.quickBadgeText}>مرغدار (مزرعه)</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.quickBadge}
-                onPress={() => {
                   setUsername('driver1');
                   setPassword('password123');
                   handleLogin('driver1', 'password123');
                 }}
               >
                 <Text style={styles.quickBadgeText}>راننده ناوگان</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.quickBadge}
+                onPress={() => {
+                  setUsername('farmer1');
+                  setPassword('password123');
+                  handleLogin('farmer1', 'password123');
+                }}
+              >
+                <Text style={styles.quickBadgeText}>مرغدار</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -380,6 +463,81 @@ const styles = StyleSheet.create({
   loginBtnText: {
     color: '#ffffff',
     fontSize: 15,
+    fontWeight: '700',
+  },
+  demoBanner: {
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 16,
+  },
+  demoBannerHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  demoBannerBadge: {
+    backgroundColor: '#059669',
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '800',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  demoBannerTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#166534',
+  },
+  demoBannerDesc: {
+    fontSize: 11,
+    color: '#15803d',
+    lineHeight: 16,
+    textAlign: 'right',
+  },
+  quickDemoManagerBtn: {
+    backgroundColor: '#047857',
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#059669',
+  },
+  quickDemoManagerText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  demoToggleContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  demoTogglePill: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 10,
+    alignItems: 'center',
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  demoTogglePillActive: {
+    backgroundColor: '#eff6ff',
+    borderColor: '#3b82f6',
+  },
+  demoToggleText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  demoToggleTextActive: {
+    color: '#1d4ed8',
     fontWeight: '700',
   },
   serverPill: {
