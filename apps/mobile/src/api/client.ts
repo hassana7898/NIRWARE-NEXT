@@ -1,4 +1,5 @@
 import { ApiClient } from '@nirware/api-client';
+import { getApiConfig, ApiConfigurationError } from '../config/api';
 
 let currentAuthToken: string | null = null;
 
@@ -10,18 +11,28 @@ export const getAuthToken = () => {
   return currentAuthToken;
 };
 
-// Production and development API endpoint resolution
-const env = (globalThis as any).process?.env;
-const MOBILE_API_URL =
-  env?.EXPO_PUBLIC_API_URL ||
-  (env?.NODE_ENV === 'production'
-    ? 'https://api.nirware.ir/api/v1'
-    : 'http://10.0.2.2:4000/api/v1');
+// Central Fail-Closed API configuration
+const config = getApiConfig();
 
 export const mobileApi = new ApiClient({
-  baseUrl: MOBILE_API_URL,
+  baseUrl: config.isValid ? config.baseUrl : 'https://unconfigured.nirware.invalid',
   getToken: () => currentAuthToken,
   onUnauthorized: () => {
     currentAuthToken = null;
   },
 });
+
+// Fail-closed enforcement: if EXPO_PUBLIC_API_URL is missing, block requests immediately with a clear error
+if (!config.isValid) {
+  const failClosed = () => {
+    throw new ApiConfigurationError(
+      config.error || 'EXPO_PUBLIC_API_URL is not configured. Request blocked (Fail-Closed).'
+    );
+  };
+  mobileApi.get = failClosed as any;
+  mobileApi.post = failClosed as any;
+  mobileApi.put = failClosed as any;
+  mobileApi.patch = failClosed as any;
+  mobileApi.delete = failClosed as any;
+}
+

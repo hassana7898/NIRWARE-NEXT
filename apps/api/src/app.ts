@@ -35,17 +35,20 @@ export function createApp(): Express {
     })
   );
 
-  // 2. Strict Explicit CORS
-  const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:3000')
+  // 2. Strict Explicit CORS (No Wildcards in Production)
+  const isProduction = process.env.NODE_ENV === 'production';
+  const rawOrigins = process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:3000';
+  const allowedOrigins = rawOrigins
     .split(',')
-    .map((o) => o.trim());
+    .map((o) => o.trim())
+    .filter((o) => !(isProduction && o === '*')); // Strictly reject wildcard in production
 
   app.use(
     cors({
       origin: (origin, callback) => {
-        // Allow mobile apps / curl / server-to-server (origin undefined)
+        // Native mobile requests (React Native / Android / iOS) and server-to-server have no browser Origin header
         if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+        if (allowedOrigins.includes(origin) || (!isProduction && allowedOrigins.includes('*'))) {
           return callback(null, true);
         }
         return callback(new Error('درخواست به دلیل محدودیت CORS مسدود گردید'));

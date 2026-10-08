@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, StatusBar, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, StatusBar, ActivityIndicator } from 'react-native';
 import { UserRole } from '@nirware/config';
 import { MobileUser } from './types';
 import { LoginScreen } from './screens/LoginScreen';
@@ -8,14 +8,20 @@ import { FarmerOrdersScreen } from './screens/FarmerOrdersScreen';
 import { DriverDeliveryScreen } from './screens/DriverDeliveryScreen';
 import { StorageService } from './services/storage.service';
 import { setAuthToken } from './api/client';
+import { getApiConfig } from './config/api';
 
 export const App: React.FC = () => {
   const [user, setUser] = useState<MobileUser | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
+  const apiConfig = getApiConfig();
 
   useEffect(() => {
     const restoreSession = async () => {
       try {
+        if (!apiConfig.isValid) {
+          setIsInitializing(false);
+          return;
+        }
         const session = await StorageService.getSession();
         if (session?.token && session?.user) {
           setAuthToken(session.token);
@@ -28,7 +34,7 @@ export const App: React.FC = () => {
       }
     };
     restoreSession();
-  }, []);
+  }, [apiConfig.isValid]);
 
   const handleLoginSuccess = async (loggedInUser: MobileUser, token: string) => {
     await StorageService.saveSession(token, loggedInUser);
@@ -41,6 +47,25 @@ export const App: React.FC = () => {
     setAuthToken(null);
     setUser(null);
   };
+
+  if (!apiConfig.isValid) {
+    return (
+      <View style={[styles.container, styles.errorContainer]}>
+        <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+        <View style={styles.errorCard}>
+          <Text style={styles.errorBadge}>پیکربندی ناقص (FAIL-CLOSED)</Text>
+          <Text style={styles.errorTitle}>آدرس سرور API تنظیم نشده است</Text>
+          <Text style={styles.errorMessage}>{apiConfig.error}</Text>
+          <View style={styles.helpBox}>
+            <Text style={styles.helpTitle}>راهنمای تنظیم محیطی (EXPO_PUBLIC_API_URL):</Text>
+            <Text style={styles.helpText}>• شبیه‌ساز اندروید: http://10.0.2.2:4000/api/v1</Text>
+            <Text style={styles.helpText}>• دستگاه فیزیکی: http://192.168.x.x:4000/api/v1</Text>
+            <Text style={styles.helpText}>• سرور پروداکشن: https://api.nirware.ir/api/v1</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   if (isInitializing) {
     return (
@@ -74,6 +99,64 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#0f172a',
+  },
+  errorContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0f172a',
+    padding: 24,
+  },
+  errorCard: {
+    backgroundColor: '#1e293b',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 420,
+    borderWidth: 1,
+    borderColor: '#ef4444',
+  },
+  errorBadge: {
+    color: '#ef4444',
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 8,
+    letterSpacing: 1,
+  },
+  errorTitle: {
+    color: '#f8fafc',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  errorMessage: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  helpBox: {
+    backgroundColor: '#0f172a',
+    borderRadius: 8,
+    padding: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#3b82f6',
+  },
+  helpTitle: {
+    color: '#93c5fd',
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 6,
+    textAlign: 'right',
+  },
+  helpText: {
+    color: '#94a3b8',
+    fontSize: 11,
+    lineHeight: 18,
+    textAlign: 'left',
+    fontFamily: 'monospace',
   },
 });
 
